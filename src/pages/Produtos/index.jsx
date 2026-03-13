@@ -10,7 +10,6 @@ import {
   Space,
   Typography,
   Statistic,
-  Switch,
   Tabs,
   Table,
   Modal,
@@ -31,7 +30,6 @@ import {
   TagsOutlined,
   GiftOutlined,
   ShopOutlined,
-  CoffeeOutlined,
 } from '@ant-design/icons'
 import PageTitle from '../../components/common/PageTitle'
 
@@ -39,11 +37,11 @@ const { Title, Text } = Typography
 const { TextArea } = Input
 
 const categoriasIniciais = [
-  { id: 1, nome: 'Espetos', ativo: true, ordem: 1 },
-  { id: 2, nome: 'Porções', ativo: true, ordem: 2 },
-  { id: 3, nome: 'Bebidas', ativo: true, ordem: 3 },
-  { id: 4, nome: 'Acompanhamentos', ativo: true, ordem: 4 },
-  { id: 5, nome: 'Entradas', ativo: true, ordem: 5 },
+  { id: 1, nome: 'Bebidas', ativo: true, ordem: 1 },
+  { id: 2, nome: 'Pratos Quentes', ativo: true, ordem: 2 },
+  { id: 3, nome: 'Pratos Frios', ativo: true, ordem: 3 },
+  { id: 4, nome: 'Guarnições', ativo: true, ordem: 4 },
+  { id: 5, nome: 'Acompanhamentos', ativo: true, ordem: 5 },
 ]
 
 const adicionaisIniciais = [
@@ -58,84 +56,9 @@ const adicionaisIniciais = [
 const produtosIniciais = [
   {
     id: 1,
-    nome: 'Espeto de Carne',
-    descricao: 'Espeto tradicional bovino',
-    categoriaId: 1,
-    categoriaNome: 'Espetos',
-    preco: 12,
-    tempoPreparo: 12,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [1, 2, 4],
-    destaque: true,
-  },
-  {
-    id: 2,
-    nome: 'Espeto de Frango',
-    descricao: 'Espeto de frango temperado',
-    categoriaId: 1,
-    categoriaNome: 'Espetos',
-    preco: 11,
-    tempoPreparo: 10,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [1, 4],
-    destaque: false,
-  },
-  {
-    id: 3,
-    nome: 'Espeto Medalhão',
-    descricao: 'Medalhão especial da casa',
-    categoriaId: 1,
-    categoriaNome: 'Espetos',
-    preco: 15,
-    tempoPreparo: 15,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: false,
-    adicionalIds: [2, 3],
-    destaque: true,
-  },
-  {
-    id: 4,
-    nome: 'Porção de Fritas',
-    descricao: 'Porção crocante',
-    categoriaId: 2,
-    categoriaNome: 'Porções',
-    preco: 18.9,
-    tempoPreparo: 18,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [5, 6],
-    destaque: false,
-  },
-  {
-    id: 5,
-    nome: 'Linguiça Acebolada',
-    descricao: 'Linguiça com cebola refogada',
-    categoriaId: 2,
-    categoriaNome: 'Porções',
-    preco: 22,
-    tempoPreparo: 20,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [4],
-    destaque: false,
-  },
-  {
-    id: 6,
     nome: 'Coca-Cola 600ml',
     descricao: 'Refrigerante gelado',
-    categoriaId: 3,
+    categoriaId: 1,
     categoriaNome: 'Bebidas',
     preco: 7.5,
     tempoPreparo: 2,
@@ -145,6 +68,151 @@ const produtosIniciais = [
     disponivelBalcao: true,
     adicionalIds: [],
     destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 2,
+    nome: 'Suco Natural',
+    descricao: 'Suco natural da fruta',
+    categoriaId: 1,
+    categoriaNome: 'Bebidas',
+    preco: 9,
+    tempoPreparo: 4,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 3,
+    nome: 'Espeto de Carne',
+    descricao: 'Espeto tradicional bovino',
+    categoriaId: 2,
+    categoriaNome: 'Pratos Quentes',
+    preco: 12,
+    tempoPreparo: 12,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [1, 2, 4],
+    destaque: true,
+    imagem: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 4,
+    nome: 'Linguiça Acebolada',
+    descricao: 'Linguiça acebolada da casa',
+    categoriaId: 2,
+    categoriaNome: 'Pratos Quentes',
+    preco: 22,
+    tempoPreparo: 20,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [4],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 5,
+    nome: 'Vinagrete',
+    descricao: 'Vinagrete fresco',
+    categoriaId: 3,
+    categoriaNome: 'Pratos Frios',
+    preco: 5,
+    tempoPreparo: 3,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 6,
+    nome: 'Maionese Caseira',
+    descricao: 'Maionese especial da casa',
+    categoriaId: 3,
+    categoriaNome: 'Pratos Frios',
+    preco: 8,
+    tempoPreparo: 4,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: false,
+    disponivelBalcao: true,
+    adicionalIds: [],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 7,
+    nome: 'Batata Frita',
+    descricao: 'Batata crocante',
+    categoriaId: 4,
+    categoriaNome: 'Guarnições',
+    preco: 18.9,
+    tempoPreparo: 18,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [5, 6],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 8,
+    nome: 'Farofa Especial',
+    descricao: 'Farofa bem temperada',
+    categoriaId: 4,
+    categoriaNome: 'Guarnições',
+    preco: 12,
+    tempoPreparo: 5,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 9,
+    nome: 'Molho Barbecue',
+    descricao: 'Molho especial',
+    categoriaId: 5,
+    categoriaNome: 'Acompanhamentos',
+    preco: 2,
+    tempoPreparo: 1,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 10,
+    nome: 'Pimenta',
+    descricao: 'Pimenta extra',
+    categoriaId: 5,
+    categoriaNome: 'Acompanhamentos',
+    preco: 0,
+    tempoPreparo: 1,
+    ativo: true,
+    disponivelSalao: true,
+    disponivelDelivery: true,
+    disponivelBalcao: true,
+    adicionalIds: [],
+    destaque: false,
+    imagem: 'https://images.unsplash.com/photo-1583225157630-5f55a4f1f4d8?auto=format&fit=crop&w=800&q=80',
   },
 ]
 
@@ -152,18 +220,18 @@ const combosIniciais = [
   {
     id: 1,
     nome: 'Combo Casal',
-    descricao: '2 espetos + 1 porção + 2 bebidas',
+    descricao: '2 pratos quentes + 1 guarnição + 2 bebidas',
     preco: 44.9,
     ativo: true,
-    itemIds: [1, 2, 4, 6],
+    itemIds: [1, 3, 7],
   },
   {
     id: 2,
     nome: 'Combo Família',
-    descricao: '4 espetos + 1 porção grande + refrigerante',
+    descricao: 'Itens variados para compartilhar',
     preco: 79.9,
     ativo: true,
-    itemIds: [1, 2, 3, 4, 6],
+    itemIds: [2, 3, 4, 7, 8],
   },
 ]
 
@@ -186,6 +254,7 @@ export default function Produtos() {
   const [filtroCategoria, setFiltroCategoria] = useState('todas')
   const [filtroStatus, setFiltroStatus] = useState('todos')
   const [filtroCanal, setFiltroCanal] = useState('todos')
+  const [categoriaVisual, setCategoriaVisual] = useState('todas')
 
   const [modalProdutoOpen, setModalProdutoOpen] = useState(false)
   const [modalCategoriaOpen, setModalCategoriaOpen] = useState(false)
@@ -205,7 +274,7 @@ export default function Produtos() {
 
       const matchBusca =
         produto.nome.toLowerCase().includes(texto) ||
-        produto.descricao.toLowerCase().includes(texto) ||
+        (produto.descricao || '').toLowerCase().includes(texto) ||
         produto.categoriaNome.toLowerCase().includes(texto)
 
       const matchCategoria =
@@ -229,9 +298,38 @@ export default function Produtos() {
           ? produto.disponivelDelivery
           : produto.disponivelBalcao
 
-      return matchBusca && matchCategoria && matchStatus && matchCanal
+      const matchCategoriaVisual =
+        categoriaVisual === 'todas'
+          ? true
+          : String(produto.categoriaId) === String(categoriaVisual)
+
+      return (
+        matchBusca &&
+        matchCategoria &&
+        matchStatus &&
+        matchCanal &&
+        matchCategoriaVisual
+      )
     })
-  }, [produtos, busca, filtroCategoria, filtroStatus, filtroCanal])
+  }, [produtos, busca, filtroCategoria, filtroStatus, filtroCanal, categoriaVisual])
+
+  const produtosAgrupados = useMemo(() => {
+    const grupos = {}
+
+    categorias
+      .filter((categoria) => categoria.ativo)
+      .sort((a, b) => a.ordem - b.ordem)
+      .forEach((categoria) => {
+        grupos[categoria.id] = {
+          ...categoria,
+          produtos: produtosFiltrados.filter(
+            (produto) => produto.categoriaId === categoria.id
+          ),
+        }
+      })
+
+    return Object.values(grupos)
+  }, [categorias, produtosFiltrados])
 
   const resumo = useMemo(() => {
     return {
@@ -255,6 +353,7 @@ export default function Produtos() {
       destaque: false,
       adicionalIds: [],
       tempoPreparo: 10,
+      imagem: '',
     })
     setModalProdutoOpen(true)
   }
@@ -274,6 +373,7 @@ export default function Produtos() {
       disponivelBalcao: produto.disponivelBalcao,
       destaque: produto.destaque,
       adicionalIds: produto.adicionalIds || [],
+      imagem: produto.imagem || '',
     })
     setModalProdutoOpen(true)
   }
@@ -399,7 +499,9 @@ export default function Produtos() {
           : item
       )
     )
-    message.success(`Categoria ${categoria.ativo ? 'inativada' : 'ativada'} com sucesso`)
+    message.success(
+      `Categoria ${categoria.ativo ? 'inativada' : 'ativada'} com sucesso`
+    )
   }
 
   const alternarStatusAdicional = (adicional) => {
@@ -413,7 +515,9 @@ export default function Produtos() {
           : item
       )
     )
-    message.success(`Adicional ${adicional.ativo ? 'inativado' : 'ativado'} com sucesso`)
+    message.success(
+      `Adicional ${adicional.ativo ? 'inativado' : 'ativado'} com sucesso`
+    )
   }
 
   const alternarStatusCombo = (combo) => {
@@ -429,72 +533,6 @@ export default function Produtos() {
     )
     message.success(`Combo ${combo.ativo ? 'inativado' : 'ativado'} com sucesso`)
   }
-
-  const produtosColumns = [
-    {
-      title: 'Produto',
-      dataIndex: 'nome',
-      render: (_, record) => (
-        <div>
-          <Text style={{ color: '#fff', fontWeight: 600 }}>{record.nome}</Text>
-          <div>
-            <Text style={{ color: '#8c8c8c', fontSize: 12 }}>{record.descricao}</Text>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: 'Categoria',
-      dataIndex: 'categoriaNome',
-      render: (value) => <Tag>{value}</Tag>,
-    },
-    {
-      title: 'Preço',
-      dataIndex: 'preco',
-      render: (value) => formatCurrency(value),
-    },
-    {
-      title: 'Preparo',
-      dataIndex: 'tempoPreparo',
-      render: (value) => `${value} min`,
-    },
-    {
-      title: 'Canais',
-      render: (_, record) => (
-        <Space wrap>
-          {record.disponivelSalao && <Tag color="blue">Salão</Tag>}
-          {record.disponivelDelivery && <Tag color="green">Delivery</Tag>}
-          {record.disponivelBalcao && <Tag color="gold">Balcão</Tag>}
-        </Space>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'ativo',
-      render: (ativo) => (
-        <Tag color={ativo ? 'success' : 'default'}>
-          {ativo ? 'Ativo' : 'Inativo'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Ações',
-      render: (_, record) => (
-        <Space>
-          <Button icon={<EditOutlined />} onClick={() => abrirEditarProduto(record)}>
-            Editar
-          </Button>
-
-          <Popconfirm
-            title={record.ativo ? 'Inativar produto?' : 'Ativar produto?'}
-            onConfirm={() => alternarStatusProduto(record)}
-          >
-            <Button>{record.ativo ? 'Inativar' : 'Ativar'}</Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ]
 
   const categoriasColumns = [
     {
@@ -681,7 +719,7 @@ export default function Produtos() {
                 />
               </Col>
 
-              <Col xs={24} md={5}>
+              <Col xs={24} md={4}>
                 <Select
                   size="large"
                   style={{ width: '100%' }}
@@ -695,7 +733,7 @@ export default function Produtos() {
                 />
               </Col>
 
-              <Col xs={24} md={3}>
+              <Col xs={24} md={4}>
                 <Select
                   size="large"
                   style={{ width: '100%' }}
@@ -722,15 +760,217 @@ export default function Produtos() {
                 </Button>
               </Col>
             </Row>
+
+            <Divider style={{ borderColor: '#262626' }} />
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 10,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Button
+                type={categoriaVisual === 'todas' ? 'primary' : 'default'}
+                onClick={() => setCategoriaVisual('todas')}
+              >
+                Todos
+              </Button>
+
+              {categorias
+                .filter((item) => item.ativo)
+                .sort((a, b) => a.ordem - b.ordem)
+                .map((item) => (
+                  <Button
+                    key={item.id}
+                    type={categoriaVisual === String(item.id) ? 'primary' : 'default'}
+                    onClick={() => setCategoriaVisual(String(item.id))}
+                  >
+                    {item.nome}
+                  </Button>
+                ))}
+            </div>
           </Card>
 
           <Card bordered={false}>
-            <Table
-              rowKey="id"
-              columns={produtosColumns}
-              dataSource={produtosFiltrados}
-              pagination={{ pageSize: 8 }}
-            />
+            <Space direction="vertical" size={24} style={{ width: '100%' }}>
+              {produtosAgrupados.map((grupo) => (
+                <div key={grupo.id}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 14,
+                    }}
+                  >
+                    <Title level={3} style={{ color: '#fff', margin: 0 }}>
+                      {grupo.nome}
+                    </Title>
+
+                    <Tag style={{ fontSize: 14, padding: '4px 10px' }}>
+                      {grupo.produtos.length} itens
+                    </Tag>
+                  </div>
+
+                  {grupo.produtos.length ? (
+                    <Row gutter={[16, 16]}>
+                      {grupo.produtos.map((produto) => (
+                        <Col xs={24} md={12} xl={8} key={produto.id}>
+                          <Card
+                            bordered={false}
+                            style={{
+                              background: '#171717',
+                              border: produto.ativo
+                                ? '1px solid #262626'
+                                : '1px solid #434343',
+                              minHeight: 380,
+                            }}
+                          >
+                            <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                              <div
+                                style={{
+                                  width: '100%',
+                                  height: 140,
+                                  borderRadius: 12,
+                                  overflow: 'hidden',
+                                  background: '#111111',
+                                  border: '1px solid #262626',
+                                  marginBottom: 4,
+                                }}
+                              >
+                                {produto.imagem ? (
+                                  <img
+                                    src={produto.imagem}
+                                    alt={produto.nome}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                      display: 'block',
+                                    }}
+                                  />
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#8c8c8c',
+                                      fontSize: 14,
+                                    }}
+                                  >
+                                    Sem imagem
+                                  </div>
+                                )}
+                              </div>
+
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  gap: 12,
+                                  alignItems: 'flex-start',
+                                }}
+                              >
+                                <div>
+                                  <Text
+                                    style={{
+                                      color: '#fff',
+                                      fontSize: 18,
+                                      fontWeight: 700,
+                                      display: 'block',
+                                    }}
+                                  >
+                                    {produto.nome}
+                                  </Text>
+                                  <Text style={{ color: '#8c8c8c' }}>
+                                    {produto.descricao}
+                                  </Text>
+                                </div>
+
+                                <Tag color={produto.ativo ? 'success' : 'default'}>
+                                  {produto.ativo ? 'Ativo' : 'Inativo'}
+                                </Tag>
+                              </div>
+
+                              <div>
+                                <Text style={{ color: '#bfbfbf' }}>Preço</Text>
+                                <div>
+                                  <Text
+                                    style={{
+                                      color: '#fff',
+                                      fontSize: 22,
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {formatCurrency(produto.preco)}
+                                  </Text>
+                                </div>
+                              </div>
+
+                              <div>
+                                <Text style={{ color: '#bfbfbf' }}>Tempo de preparo</Text>
+                                <div>
+                                  <Text style={{ color: '#fff' }}>
+                                    {produto.tempoPreparo} min
+                                  </Text>
+                                </div>
+                              </div>
+
+                              <Space wrap>
+                                {produto.disponivelSalao && <Tag color="blue">Salão</Tag>}
+                                {produto.disponivelDelivery && (
+                                  <Tag color="green">Delivery</Tag>
+                                )}
+                                {produto.disponivelBalcao && (
+                                  <Tag color="gold">Balcão</Tag>
+                                )}
+                                {produto.destaque && (
+                                  <Tag color="magenta">Destaque</Tag>
+                                )}
+                              </Space>
+
+                              <Space style={{ marginTop: 8 }}>
+                                <Button
+                                  icon={<EditOutlined />}
+                                  onClick={() => abrirEditarProduto(produto)}
+                                >
+                                  Editar
+                                </Button>
+
+                                <Popconfirm
+                                  title={
+                                    produto.ativo
+                                      ? 'Inativar produto?'
+                                      : 'Ativar produto?'
+                                  }
+                                  onConfirm={() => alternarStatusProduto(produto)}
+                                >
+                                  <Button>{produto.ativo ? 'Inativar' : 'Ativar'}</Button>
+                                </Popconfirm>
+                              </Space>
+                            </Space>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  ) : (
+                    <Card
+                      bordered={false}
+                      style={{
+                        background: '#141414',
+                        border: '1px dashed #303030',
+                      }}
+                    >
+                      <Empty description={`Nenhum produto em ${grupo.nome}`} />
+                    </Card>
+                  )}
+                </div>
+              ))}
+            </Space>
           </Card>
         </>
       ),
@@ -918,6 +1158,12 @@ export default function Produtos() {
             <Col xs={24}>
               <Form.Item label="Descrição" name="descricao">
                 <TextArea rows={3} placeholder="Descrição do produto" />
+              </Form.Item>
+            </Col>
+
+            <Col xs={24}>
+              <Form.Item label="Imagem (URL ou caminho)" name="imagem">
+                <Input placeholder="https://... ou /produtos/espeto-carne.jpg" />
               </Form.Item>
             </Col>
 
