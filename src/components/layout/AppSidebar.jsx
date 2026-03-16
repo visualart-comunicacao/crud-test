@@ -22,6 +22,11 @@ export default function AppSidebar() {
       label: 'Dashboard',
     },
     {
+      key: '/caixa',
+      icon: <DashboardOutlined />,
+      label: 'Caixa',
+    },
+    {
       key: '/comandas',
       icon: <AppstoreOutlined />,
       label: 'Comandas',

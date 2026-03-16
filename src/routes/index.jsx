@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from '../components/layout/MainLayout'
 import Login from '../pages/Login'
 import Dashboard from '../pages/Dashboard'
+import Caixa from '../pages/Caixa'
 import Comandas from '../pages/Comandas'
 import Cozinha from '../pages/Cozinha'
 import Delivery from '../pages/Delivery'
@@ -16,6 +17,7 @@ export default function RoutesApp() {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="caixa" element={<Caixa />} />
         <Route path="comandas" element={<Comandas />} />
         <Route path="cozinha" element={<Cozinha />} />
         <Route path="delivery" element={<Delivery />} />
