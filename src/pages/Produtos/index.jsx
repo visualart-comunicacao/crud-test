@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Row,
   Col,
@@ -21,6 +21,7 @@ import {
   Checkbox,
   List,
   Empty,
+  Spin,
 } from 'antd'
 import {
   SearchOutlined,
@@ -32,208 +33,10 @@ import {
   ShopOutlined,
 } from '@ant-design/icons'
 import PageTitle from '../../components/common/PageTitle'
+import http from '@/api/http'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
-
-const categoriasIniciais = [
-  { id: 1, nome: 'Bebidas', ativo: true, ordem: 1 },
-  { id: 2, nome: 'Pratos Quentes', ativo: true, ordem: 2 },
-  { id: 3, nome: 'Pratos Frios', ativo: true, ordem: 3 },
-  { id: 4, nome: 'Guarnições', ativo: true, ordem: 4 },
-  { id: 5, nome: 'Acompanhamentos', ativo: true, ordem: 5 },
-]
-
-const adicionaisIniciais = [
-  { id: 1, nome: 'Pimenta', preco: 0, ativo: true },
-  { id: 2, nome: 'Farofa extra', preco: 3, ativo: true },
-  { id: 3, nome: 'Molho barbecue', preco: 2, ativo: true },
-  { id: 4, nome: 'Sem cebola', preco: 0, ativo: true },
-  { id: 5, nome: 'Queijo extra', preco: 4, ativo: true },
-  { id: 6, nome: 'Bacon', preco: 5, ativo: true },
-]
-
-const produtosIniciais = [
-  {
-    id: 1,
-    nome: 'Coca-Cola 600ml',
-    descricao: 'Refrigerante gelado',
-    categoriaId: 1,
-    categoriaNome: 'Bebidas',
-    preco: 7.5,
-    tempoPreparo: 2,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 2,
-    nome: 'Suco Natural',
-    descricao: 'Suco natural da fruta',
-    categoriaId: 1,
-    categoriaNome: 'Bebidas',
-    preco: 9,
-    tempoPreparo: 4,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 3,
-    nome: 'Espeto de Carne',
-    descricao: 'Espeto tradicional bovino',
-    categoriaId: 2,
-    categoriaNome: 'Pratos Quentes',
-    preco: 12,
-    tempoPreparo: 12,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [1, 2, 4],
-    destaque: true,
-    imagem: 'https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 4,
-    nome: 'Linguiça Acebolada',
-    descricao: 'Linguiça acebolada da casa',
-    categoriaId: 2,
-    categoriaNome: 'Pratos Quentes',
-    preco: 22,
-    tempoPreparo: 20,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [4],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 5,
-    nome: 'Vinagrete',
-    descricao: 'Vinagrete fresco',
-    categoriaId: 3,
-    categoriaNome: 'Pratos Frios',
-    preco: 5,
-    tempoPreparo: 3,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 6,
-    nome: 'Maionese Caseira',
-    descricao: 'Maionese especial da casa',
-    categoriaId: 3,
-    categoriaNome: 'Pratos Frios',
-    preco: 8,
-    tempoPreparo: 4,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: false,
-    disponivelBalcao: true,
-    adicionalIds: [],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 7,
-    nome: 'Batata Frita',
-    descricao: 'Batata crocante',
-    categoriaId: 4,
-    categoriaNome: 'Guarnições',
-    preco: 18.9,
-    tempoPreparo: 18,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [5, 6],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 8,
-    nome: 'Farofa Especial',
-    descricao: 'Farofa bem temperada',
-    categoriaId: 4,
-    categoriaNome: 'Guarnições',
-    preco: 12,
-    tempoPreparo: 5,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 9,
-    nome: 'Molho Barbecue',
-    descricao: 'Molho especial',
-    categoriaId: 5,
-    categoriaNome: 'Acompanhamentos',
-    preco: 2,
-    tempoPreparo: 1,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=800&q=80',
-  },
-  {
-    id: 10,
-    nome: 'Pimenta',
-    descricao: 'Pimenta extra',
-    categoriaId: 5,
-    categoriaNome: 'Acompanhamentos',
-    preco: 0,
-    tempoPreparo: 1,
-    ativo: true,
-    disponivelSalao: true,
-    disponivelDelivery: true,
-    disponivelBalcao: true,
-    adicionalIds: [],
-    destaque: false,
-    imagem: 'https://images.unsplash.com/photo-1583225157630-5f55a4f1f4d8?auto=format&fit=crop&w=800&q=80',
-  },
-]
-
-const combosIniciais = [
-  {
-    id: 1,
-    nome: 'Combo Casal',
-    descricao: '2 pratos quentes + 1 guarnição + 2 bebidas',
-    preco: 44.9,
-    ativo: true,
-    itemIds: [1, 3, 7],
-  },
-  {
-    id: 2,
-    nome: 'Combo Família',
-    descricao: 'Itens variados para compartilhar',
-    preco: 79.9,
-    ativo: true,
-    itemIds: [2, 3, 4, 7, 8],
-  },
-]
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString('pt-BR', {
@@ -245,10 +48,16 @@ function formatCurrency(value) {
 export default function Produtos() {
   const [tabAtiva, setTabAtiva] = useState('produtos')
 
-  const [categorias, setCategorias] = useState(categoriasIniciais)
-  const [adicionais, setAdicionais] = useState(adicionaisIniciais)
-  const [produtos, setProdutos] = useState(produtosIniciais)
-  const [combos, setCombos] = useState(combosIniciais)
+  const [categorias, setCategorias] = useState([])
+  const [adicionais, setAdicionais] = useState([])
+  const [produtos, setProdutos] = useState([])
+  const [combos, setCombos] = useState([])
+
+  const [loadingPage, setLoadingPage] = useState(true)
+  const [savingProduto, setSavingProduto] = useState(false)
+  const [savingCategoria, setSavingCategoria] = useState(false)
+  const [savingAdicional, setSavingAdicional] = useState(false)
+  const [savingCombo, setSavingCombo] = useState(false)
 
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('todas')
@@ -268,14 +77,40 @@ export default function Produtos() {
   const [formAdicional] = Form.useForm()
   const [formCombo] = Form.useForm()
 
+  async function carregarTudo() {
+    try {
+      setLoadingPage(true)
+
+      const [categoriasRes, adicionaisRes, produtosRes, combosRes] = await Promise.all([
+        http.get('/categories'),
+        http.get('/additionals'),
+        http.get('/products'),
+        http.get('/combos'),
+      ])
+
+      setCategorias(categoriasRes.data || [])
+      setAdicionais(adicionaisRes.data || [])
+      setProdutos(produtosRes.data || [])
+      setCombos(combosRes.data || [])
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível carregar os dados.')
+    } finally {
+      setLoadingPage(false)
+    }
+  }
+
+  useEffect(() => {
+    carregarTudo()
+  }, [])
+
   const produtosFiltrados = useMemo(() => {
     return produtos.filter((produto) => {
       const texto = busca.toLowerCase()
 
       const matchBusca =
-        produto.nome.toLowerCase().includes(texto) ||
+        produto.nome?.toLowerCase().includes(texto) ||
         (produto.descricao || '').toLowerCase().includes(texto) ||
-        produto.categoriaNome.toLowerCase().includes(texto)
+        (produto.categoriaNome || '').toLowerCase().includes(texto)
 
       const matchCategoria =
         filtroCategoria === 'todas'
@@ -286,17 +121,17 @@ export default function Produtos() {
         filtroStatus === 'todos'
           ? true
           : filtroStatus === 'ativos'
-          ? produto.ativo
-          : !produto.ativo
+            ? produto.ativo
+            : !produto.ativo
 
       const matchCanal =
         filtroCanal === 'todos'
           ? true
           : filtroCanal === 'salao'
-          ? produto.disponivelSalao
-          : filtroCanal === 'delivery'
-          ? produto.disponivelDelivery
-          : produto.disponivelBalcao
+            ? produto.disponivelSalao
+            : filtroCanal === 'delivery'
+              ? produto.disponivelDelivery
+              : produto.disponivelBalcao
 
       const matchCategoriaVisual =
         categoriaVisual === 'todas'
@@ -317,13 +152,16 @@ export default function Produtos() {
     const grupos = {}
 
     categorias
-      .filter((categoria) => categoria.ativo)
-      .sort((a, b) => a.ordem - b.ordem)
+      .filter((categoria) => categoria.isActive)
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
       .forEach((categoria) => {
         grupos[categoria.id] = {
-          ...categoria,
+          id: categoria.id,
+          nome: categoria.name,
+          ordem: categoria.sortOrder,
+          ativo: categoria.isActive,
           produtos: produtosFiltrados.filter(
-            (produto) => produto.categoriaId === categoria.id
+            (produto) => String(produto.categoriaId) === String(categoria.id),
           ),
         }
       })
@@ -381,171 +219,178 @@ export default function Produtos() {
   const salvarProduto = async () => {
     try {
       const values = await formProduto.validateFields()
-      const categoria = categorias.find((item) => item.id === values.categoriaId)
+      setSavingProduto(true)
 
-      if (!categoria) {
-        message.error('Categoria inválida')
-        return
+      const payload = {
+        nome: values.nome,
+        descricao: values.descricao || '',
+        categoriaId: values.categoriaId,
+        preco: values.preco,
+        tempoPreparo: values.tempoPreparo,
+        ativo: values.ativo,
+        disponivelSalao: values.disponivelSalao,
+        disponivelDelivery: values.disponivelDelivery,
+        disponivelBalcao: values.disponivelBalcao,
+        destaque: values.destaque,
+        adicionalIds: values.adicionalIds || [],
+        imagem: values.imagem || '',
       }
 
       if (produtoEditando) {
+        const { data } = await http.put(`/products/${produtoEditando.id}`, payload)
         setProdutos((prev) =>
-          prev.map((item) =>
-            item.id === produtoEditando.id
-              ? {
-                  ...item,
-                  ...values,
-                  categoriaNome: categoria.nome,
-                }
-              : item
-          )
+          prev.map((item) => (item.id === produtoEditando.id ? data : item)),
         )
         message.success('Produto atualizado com sucesso')
       } else {
-        const novoProduto = {
-          id: Math.max(...produtos.map((item) => item.id), 0) + 1,
-          ...values,
-          categoriaNome: categoria.nome,
-        }
-
-        setProdutos((prev) => [novoProduto, ...prev])
+        const { data } = await http.post('/products', payload)
+        setProdutos((prev) => [data, ...prev])
         message.success('Produto cadastrado com sucesso')
       }
 
       setModalProdutoOpen(false)
       setProdutoEditando(null)
       formProduto.resetFields()
-    } catch (error) {}
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível salvar o produto.')
+      }
+    } finally {
+      setSavingProduto(false)
+    }
   }
 
   const salvarCategoria = async () => {
     try {
       const values = await formCategoria.validateFields()
+      setSavingCategoria(true)
 
-      const novaCategoria = {
-        id: Math.max(...categorias.map((item) => item.id), 0) + 1,
+      const { data } = await http.post('/categories', {
         nome: values.nome,
         ordem: values.ordem,
-        ativo: true,
-      }
+      })
 
-      setCategorias((prev) => [...prev, novaCategoria])
+      setCategorias((prev) => [...prev, data])
       setModalCategoriaOpen(false)
       formCategoria.resetFields()
       message.success('Categoria cadastrada com sucesso')
-    } catch (error) {}
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível salvar a categoria.')
+      }
+    } finally {
+      setSavingCategoria(false)
+    }
   }
 
   const salvarAdicional = async () => {
     try {
       const values = await formAdicional.validateFields()
+      setSavingAdicional(true)
 
-      const novoAdicional = {
-        id: Math.max(...adicionais.map((item) => item.id), 0) + 1,
+      const { data } = await http.post('/additionals', {
         nome: values.nome,
         preco: values.preco,
-        ativo: true,
-      }
+      })
 
-      setAdicionais((prev) => [...prev, novoAdicional])
+      setAdicionais((prev) => [...prev, data])
       setModalAdicionalOpen(false)
       formAdicional.resetFields()
       message.success('Adicional cadastrado com sucesso')
-    } catch (error) {}
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível salvar o adicional.')
+      }
+    } finally {
+      setSavingAdicional(false)
+    }
   }
 
   const salvarCombo = async () => {
     try {
       const values = await formCombo.validateFields()
+      setSavingCombo(true)
 
-      const novoCombo = {
-        id: Math.max(...combos.map((item) => item.id), 0) + 1,
+      const { data } = await http.post('/combos', {
         nome: values.nome,
         descricao: values.descricao,
         preco: values.preco,
-        ativo: true,
         itemIds: values.itemIds || [],
-      }
+      })
 
-      setCombos((prev) => [...prev, novoCombo])
+      setCombos((prev) => [...prev, data])
       setModalComboOpen(false)
       formCombo.resetFields()
       message.success('Combo cadastrado com sucesso')
-    } catch (error) {}
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível salvar o combo.')
+      }
+    } finally {
+      setSavingCombo(false)
+    }
   }
 
-  const alternarStatusProduto = (produto) => {
-    setProdutos((prev) =>
-      prev.map((item) =>
-        item.id === produto.id
-          ? {
-              ...item,
-              ativo: !item.ativo,
-            }
-          : item
-      )
-    )
-    message.success(`Produto ${produto.ativo ? 'inativado' : 'ativado'} com sucesso`)
+  const alternarStatusProduto = async (produto) => {
+    try {
+      const { data } = await http.patch(`/products/${produto.id}/status`)
+      setProdutos((prev) => prev.map((item) => (item.id === produto.id ? data : item)))
+      message.success(`Produto ${produto.ativo ? 'inativado' : 'ativado'} com sucesso`)
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível alterar o produto.')
+    }
   }
 
-  const alternarStatusCategoria = (categoria) => {
-    setCategorias((prev) =>
-      prev.map((item) =>
-        item.id === categoria.id
-          ? {
-              ...item,
-              ativo: !item.ativo,
-            }
-          : item
+  const alternarStatusCategoria = async (categoria) => {
+    try {
+      const { data } = await http.patch(`/categories/${categoria.id}/status`)
+      setCategorias((prev) =>
+        prev.map((item) => (item.id === categoria.id ? data : item)),
       )
-    )
-    message.success(
-      `Categoria ${categoria.ativo ? 'inativada' : 'ativada'} com sucesso`
-    )
+      message.success(
+        `Categoria ${categoria.isActive ? 'inativada' : 'ativada'} com sucesso`,
+      )
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível alterar a categoria.')
+    }
   }
 
-  const alternarStatusAdicional = (adicional) => {
-    setAdicionais((prev) =>
-      prev.map((item) =>
-        item.id === adicional.id
-          ? {
-              ...item,
-              ativo: !item.ativo,
-            }
-          : item
+  const alternarStatusAdicional = async (adicional) => {
+    try {
+      const { data } = await http.patch(`/additionals/${adicional.id}/status`)
+      setAdicionais((prev) =>
+        prev.map((item) => (item.id === adicional.id ? data : item)),
       )
-    )
-    message.success(
-      `Adicional ${adicional.ativo ? 'inativado' : 'ativado'} com sucesso`
-    )
+      message.success(
+        `Adicional ${adicional.isActive ? 'inativado' : 'ativado'} com sucesso`,
+      )
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível alterar o adicional.')
+    }
   }
 
-  const alternarStatusCombo = (combo) => {
-    setCombos((prev) =>
-      prev.map((item) =>
-        item.id === combo.id
-          ? {
-              ...item,
-              ativo: !item.ativo,
-            }
-          : item
-      )
-    )
-    message.success(`Combo ${combo.ativo ? 'inativado' : 'ativado'} com sucesso`)
+  const alternarStatusCombo = async (combo) => {
+    try {
+      const { data } = await http.patch(`/combos/${combo.id}/status`)
+      setCombos((prev) => prev.map((item) => (item.id === combo.id ? data : item)))
+      message.success(`Combo ${combo.ativo ? 'inativado' : 'ativado'} com sucesso`)
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível alterar o combo.')
+    }
   }
 
   const categoriasColumns = [
     {
       title: 'Categoria',
-      dataIndex: 'nome',
+      dataIndex: 'name',
     },
     {
       title: 'Ordem',
-      dataIndex: 'ordem',
+      dataIndex: 'sortOrder',
     },
     {
       title: 'Status',
-      dataIndex: 'ativo',
+      dataIndex: 'isActive',
       render: (ativo) => (
         <Tag color={ativo ? 'success' : 'default'}>
           {ativo ? 'Ativa' : 'Inativa'}
@@ -556,10 +401,10 @@ export default function Produtos() {
       title: 'Ações',
       render: (_, record) => (
         <Popconfirm
-          title={record.ativo ? 'Inativar categoria?' : 'Ativar categoria?'}
+          title={record.isActive ? 'Inativar categoria?' : 'Ativar categoria?'}
           onConfirm={() => alternarStatusCategoria(record)}
         >
-          <Button>{record.ativo ? 'Inativar' : 'Ativar'}</Button>
+          <Button>{record.isActive ? 'Inativar' : 'Ativar'}</Button>
         </Popconfirm>
       ),
     },
@@ -568,16 +413,16 @@ export default function Produtos() {
   const adicionaisColumns = [
     {
       title: 'Adicional',
-      dataIndex: 'nome',
+      dataIndex: 'name',
     },
     {
       title: 'Preço extra',
-      dataIndex: 'preco',
+      dataIndex: 'price',
       render: (value) => formatCurrency(value),
     },
     {
       title: 'Status',
-      dataIndex: 'ativo',
+      dataIndex: 'isActive',
       render: (ativo) => (
         <Tag color={ativo ? 'success' : 'default'}>
           {ativo ? 'Ativo' : 'Inativo'}
@@ -588,10 +433,10 @@ export default function Produtos() {
       title: 'Ações',
       render: (_, record) => (
         <Popconfirm
-          title={record.ativo ? 'Inativar adicional?' : 'Ativar adicional?'}
+          title={record.isActive ? 'Inativar adicional?' : 'Ativar adicional?'}
           onConfirm={() => alternarStatusAdicional(record)}
         >
-          <Button>{record.ativo ? 'Inativar' : 'Ativar'}</Button>
+          <Button>{record.isActive ? 'Inativar' : 'Ativar'}</Button>
         </Popconfirm>
       ),
     },
@@ -712,7 +557,7 @@ export default function Produtos() {
                   options={[
                     { label: 'Todas as categorias', value: 'todas' },
                     ...categorias.map((item) => ({
-                      label: item.nome,
+                      label: item.name,
                       value: String(item.id),
                     })),
                   ]}
@@ -778,15 +623,15 @@ export default function Produtos() {
               </Button>
 
               {categorias
-                .filter((item) => item.ativo)
-                .sort((a, b) => a.ordem - b.ordem)
+                .filter((item) => item.isActive)
+                .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
                 .map((item) => (
                   <Button
                     key={item.id}
                     type={categoriaVisual === String(item.id) ? 'primary' : 'default'}
                     onClick={() => setCategoriaVisual(String(item.id))}
                   >
-                    {item.nome}
+                    {item.name}
                   </Button>
                 ))}
             </div>
@@ -928,9 +773,7 @@ export default function Produtos() {
                                 {produto.disponivelBalcao && (
                                   <Tag color="gold">Balcão</Tag>
                                 )}
-                                {produto.destaque && (
-                                  <Tag color="magenta">Destaque</Tag>
-                                )}
+                                {produto.destaque && <Tag color="magenta">Destaque</Tag>}
                               </Space>
 
                               <Space style={{ marginTop: 8 }}>
@@ -943,9 +786,7 @@ export default function Produtos() {
 
                                 <Popconfirm
                                   title={
-                                    produto.ativo
-                                      ? 'Inativar produto?'
-                                      : 'Ativar produto?'
+                                    produto.ativo ? 'Inativar produto?' : 'Ativar produto?'
                                   }
                                   onConfirm={() => alternarStatusProduto(produto)}
                                 >
@@ -1102,6 +943,29 @@ export default function Produtos() {
     },
   ]
 
+  if (loadingPage) {
+    return (
+      <>
+        <PageTitle
+          title="Produtos"
+          subtitle="Gestão do cardápio, categorias, adicionais e combos"
+        />
+        <Card bordered={false}>
+          <div
+            style={{
+              minHeight: 300,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Spin size="large" />
+          </div>
+        </Card>
+      </>
+    )
+  }
+
   return (
     <>
       <PageTitle
@@ -1123,6 +987,7 @@ export default function Produtos() {
         onOk={salvarProduto}
         okText={produtoEditando ? 'Salvar alterações' : 'Cadastrar produto'}
         cancelText="Cancelar"
+        confirmLoading={savingProduto}
         width={760}
       >
         <Form form={formProduto} layout="vertical">
@@ -1146,9 +1011,9 @@ export default function Produtos() {
                 <Select
                   placeholder="Selecione a categoria"
                   options={categorias
-                    .filter((item) => item.ativo)
+                    .filter((item) => item.isActive)
                     .map((item) => ({
-                      label: item.nome,
+                      label: item.name,
                       value: item.id,
                     }))}
                 />
@@ -1193,9 +1058,9 @@ export default function Produtos() {
                   mode="multiple"
                   placeholder="Selecionar adicionais"
                   options={adicionais
-                    .filter((item) => item.ativo)
+                    .filter((item) => item.isActive)
                     .map((item) => ({
-                      label: `${item.nome} • ${formatCurrency(item.preco)}`,
+                      label: `${item.name} • ${formatCurrency(item.price)}`,
                       value: item.id,
                     }))}
                 />
@@ -1246,6 +1111,7 @@ export default function Produtos() {
         onOk={salvarCategoria}
         okText="Salvar categoria"
         cancelText="Cancelar"
+        confirmLoading={savingCategoria}
       >
         <Form form={formCategoria} layout="vertical">
           <Form.Item
@@ -1273,6 +1139,7 @@ export default function Produtos() {
         onOk={salvarAdicional}
         okText="Salvar adicional"
         cancelText="Cancelar"
+        confirmLoading={savingAdicional}
       >
         <Form form={formAdicional} layout="vertical">
           <Form.Item
@@ -1300,6 +1167,7 @@ export default function Produtos() {
         onOk={salvarCombo}
         okText="Salvar combo"
         cancelText="Cancelar"
+        confirmLoading={savingCombo}
       >
         <Form form={formCombo} layout="vertical">
           <Form.Item

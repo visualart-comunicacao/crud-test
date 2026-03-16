@@ -1,6 +1,5 @@
-import React, { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  App,
   Avatar,
   Button,
   Card,
@@ -12,6 +11,7 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Switch,
   Tabs,
   Tag,
@@ -31,6 +31,7 @@ import {
   UploadOutlined,
   UserOutlined,
 } from '@ant-design/icons'
+import http from '@/api/http'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -96,6 +97,102 @@ const initialValues = {
   },
 }
 
+function toNumberOrNull(value) {
+  if (value === undefined || value === null || value === '') return null
+  const parsed = Number(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function mapApiToForm(data = {}) {
+  return {
+    empresa: {
+      razaoSocial: data.razaoSocial ?? '',
+      nomeFantasia: data.nomeFantasia ?? '',
+      cnpj: data.cnpj ?? '',
+      telefone: data.telefone ?? '',
+      whatsapp: data.whatsapp ?? '',
+      email: data.email ?? '',
+      endereco: data.endereco ?? '',
+      numero: data.numero ?? '',
+      bairro: data.bairro ?? '',
+      cidade: data.cidade ?? '',
+      uf: data.uf ?? '',
+      cep: data.cep ?? '',
+      horarioFuncionamento: data.horarioFuncionamento ?? '',
+      taxaServico: toNumberOrNull(data.taxaServico),
+      couvert: toNumberOrNull(data.couvert),
+      rodapeCupom: data.rodapeCupom ?? '',
+    },
+    operacao: {
+      usaMesa: data.usaMesa ?? true,
+      usaComanda: data.usaComanda ?? true,
+      comandaObrigatoria: data.comandaObrigatoria ?? false,
+      qtdMesas: toNumberOrNull(data.qtdMesas),
+      separarPedidoPorSetor: data.separarPedidoPorSetor ?? true,
+      bloquearVendaSemEstoque: data.bloquearVendaSemEstoque ?? true,
+      exigirObservacaoCancelamento: data.exigirObservacaoCancelamento ?? true,
+      permitirDescontoLivre: data.permitirDescontoLivre ?? false,
+    },
+    impressao: {
+      impressoraCozinha: data.impressoraCozinha ?? '',
+      impressoraBar: data.impressoraBar ?? '',
+      impressoraCaixa: data.impressoraCaixa ?? '',
+      tamanhoPapel: data.tamanhoPapel ?? '80mm',
+      imprimirAutomaticamente: data.imprimirAutomaticamente ?? true,
+      imprimirDuasVias: data.imprimirDuasVias ?? false,
+      imprimirNomeGarcom: data.imprimirNomeGarcom ?? true,
+      imprimirHorario: data.imprimirHorario ?? true,
+    },
+    notificacoes: {
+      somNovoPedido: data.somNovoPedido ?? true,
+      alertaPedidoPronto: data.alertaPedidoPronto ?? true,
+      alertaMesaAbertaSemConsumo: data.alertaMesaAbertaSemConsumo ?? false,
+      tempoAlertaMesaSemConsumo: toNumberOrNull(data.tempoAlertaMesaSemConsumo),
+    },
+    sistema: {
+      tema: data.tema ?? 'light',
+      formatoData: data.formatoData ?? 'DD/MM/YYYY',
+      fusoHorario: data.fusoHorario ?? 'America/Sao_Paulo',
+      logoutAutomaticoMinutos: toNumberOrNull(data.logoutAutomaticoMinutos),
+      forcarTrocaSenhaPadrao: data.forcarTrocaSenhaPadrao ?? true,
+      exibirAtalhosInicio: data.exibirAtalhosInicio ?? true,
+    },
+    integracoes: {
+      whatsappToken: data.whatsappToken ?? '',
+      webhookPedidos: data.webhookPedidos ?? '',
+      ifoodHabilitado: data.ifoodHabilitado ?? false,
+      apiEntregaHabilitada: data.apiEntregaHabilitada ?? false,
+    },
+  }
+}
+
+function mapFormToApi(values) {
+  return {
+    ...values.empresa,
+    ...values.operacao,
+    ...values.impressao,
+    ...values.notificacoes,
+    ...values.sistema,
+    ...values.integracoes,
+    taxaServico: toNumberOrNull(values?.empresa?.taxaServico),
+    couvert: toNumberOrNull(values?.empresa?.couvert),
+    qtdMesas: toNumberOrNull(values?.operacao?.qtdMesas),
+    tempoAlertaMesaSemConsumo: toNumberOrNull(
+      values?.notificacoes?.tempoAlertaMesaSemConsumo,
+    ),
+    logoutAutomaticoMinutos: toNumberOrNull(values?.sistema?.logoutAutomaticoMinutos),
+  }
+}
+
+function getImageUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+
+  const baseURL = http.defaults.baseURL || ''
+  const origin = baseURL.replace(/\/api\/v1\/?$/, '')
+  return `${origin}${url}`
+}
+
 function SectionCard({ title, subtitle, children }) {
   return (
     <Card style={{ borderRadius: 16 }}>
@@ -117,7 +214,29 @@ function SectionCard({ title, subtitle, children }) {
 export default function ConfiguracoesPage() {
   const [form] = Form.useForm()
   const [logoFileList, setLogoFileList] = useState([])
+  const [currentLogoUrl, setCurrentLogoUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        setLoading(true)
+        const { data } = await http.get('/settings')
+
+        form.setFieldsValue(mapApiToForm(data))
+        setCurrentLogoUrl(getImageUrl(data?.logoUrl))
+      } catch (error) {
+        message.error(
+          error?.response?.data?.message || 'Não foi possível carregar as configurações.',
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSettings()
+  }, [form])
 
   const uploadProps = useMemo(
     () => ({
@@ -125,22 +244,55 @@ export default function ConfiguracoesPage() {
       maxCount: 1,
       fileList: logoFileList,
       onChange: ({ fileList }) => setLogoFileList(fileList),
+      accept: '.png,.jpg,.jpeg,.webp',
     }),
     [logoFileList],
   )
+
+  const handleRestoreDefaults = () => {
+    form.setFieldsValue(initialValues)
+    setLogoFileList([])
+  }
 
   const handleSave = async () => {
     try {
       const values = await form.validateFields()
       setSaving(true)
 
-      console.log('CONFIGURAÇÕES', values)
-      console.log('LOGO', logoFileList)
+      const payload = mapFormToApi(values)
+      const { data } = await http.put('/settings', payload)
 
-      await new Promise((resolve) => setTimeout(resolve, 600))
+      let finalData = data
+
+      if (logoFileList.length > 0 && logoFileList[0]?.originFileObj) {
+        const formData = new FormData()
+        formData.append('logo', logoFileList[0].originFileObj)
+
+        const logoResponse = await http.post('/settings/logo', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+
+        finalData = {
+          ...finalData,
+          ...logoResponse.data,
+        }
+
+        setLogoFileList([])
+      }
+
+      form.setFieldsValue(mapApiToForm(finalData))
+      setCurrentLogoUrl(getImageUrl(finalData?.logoUrl))
       message.success('Configurações salvas com sucesso!')
     } catch (error) {
-      message.error('Revise os campos obrigatórios antes de salvar.')
+      if (error?.errorFields) {
+        message.error('Revise os campos obrigatórios antes de salvar.')
+      } else {
+        message.error(
+          error?.response?.data?.message || 'Não foi possível salvar as configurações.',
+        )
+      }
     } finally {
       setSaving(false)
     }
@@ -164,15 +316,31 @@ export default function ConfiguracoesPage() {
             <Row gutter={16}>
               <Col xs={24} md={8}>
                 <Space direction="vertical" align="center" style={{ width: '100%' }}>
-                  <Avatar
-                    size={88}
-                    icon={<ShopOutlined />}
-                    shape="square"
-                    style={{ borderRadius: 16 }}
-                  />
+                  {currentLogoUrl ? (
+                    <img
+                      src={currentLogoUrl}
+                      alt="Logo do restaurante"
+                      style={{
+                        width: 88,
+                        height: 88,
+                        objectFit: 'cover',
+                        borderRadius: 16,
+                        border: '1px solid #f0f0f0',
+                      }}
+                    />
+                  ) : (
+                    <Avatar
+                      size={88}
+                      icon={<ShopOutlined />}
+                      shape="square"
+                      style={{ borderRadius: 16 }}
+                    />
+                  )}
+
                   <Upload {...uploadProps}>
                     <Button icon={<UploadOutlined />}>Enviar logo</Button>
                   </Upload>
+
                   <Text type="secondary">
                     PNG ou JPG. Ideal para cupom e tela inicial.
                   </Text>

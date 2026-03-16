@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Row,
   Col,
@@ -24,442 +24,65 @@ import {
   Descriptions,
   Steps,
   Alert,
+  Spin,
 } from 'antd'
 import {
   SearchOutlined,
   PlusOutlined,
   PrinterOutlined,
-  SwapOutlined,
   ShoppingCartOutlined,
   DollarOutlined,
   HistoryOutlined,
   TableOutlined,
   FireOutlined,
   WalletOutlined,
-  EditOutlined,
   UserOutlined,
   CheckCircleOutlined,
+  EditOutlined,
 } from '@ant-design/icons'
 import PageTitle from '../../components/common/PageTitle'
+import http from '@/api/http'
 
 const { Text, Title } = Typography
 const { TextArea } = Input
 
 const STATUS_COMANDA = {
-  LIVRE: 'livre',
-  ABERTA: 'aberta',
-  PREPARO: 'preparo',
-  PRONTA: 'pronta',
-  FECHAMENTO: 'fechamento',
-  FINALIZADA: 'finalizada',
+  LIVRE: 'LIVRE',
+  ABERTA: 'ABERTA',
+  FINALIZADA: 'FECHADA',
+  CANCELADA: 'CANCELADA',
 }
-
-const STATUS_ITEM = {
-  LANCADO: 'lancado',
-  ENVIADO_COZINHA: 'enviado_cozinha',
-  EM_PREPARO: 'em_preparo',
-  PRONTO: 'pronto',
-  ENTREGUE: 'entregue',
-  CANCELADO: 'cancelado',
-}
-
-const produtosMock = [
-  {
-    id: 1,
-    categoria: 'Espetos',
-    nome: 'Espeto de Carne',
-    preco: 12,
-    adicionais: ['Pimenta', 'Farofa extra', 'Sem cebola'],
-  },
-  {
-    id: 2,
-    categoria: 'Espetos',
-    nome: 'Espeto de Frango',
-    preco: 11,
-    adicionais: ['Molho especial', 'Pimenta', 'Sem alho'],
-  },
-  {
-    id: 3,
-    categoria: 'Espetos',
-    nome: 'Espeto Medalhão',
-    preco: 15,
-    adicionais: ['Molho barbecue', 'Farofa extra'],
-  },
-  {
-    id: 4,
-    categoria: 'Porções',
-    nome: 'Porção de Fritas',
-    preco: 18.9,
-    adicionais: ['Cheddar', 'Bacon', 'Sem sal'],
-  },
-  {
-    id: 5,
-    categoria: 'Porções',
-    nome: 'Linguiça Acebolada',
-    preco: 22,
-    adicionais: ['Mais cebola', 'Sem cebola'],
-  },
-  {
-    id: 6,
-    categoria: 'Bebidas',
-    nome: 'Coca-Cola 600ml',
-    preco: 7.5,
-    adicionais: ['Com gelo', 'Sem gelo'],
-  },
-  {
-    id: 7,
-    categoria: 'Bebidas',
-    nome: 'Heineken 600ml',
-    preco: 16.5,
-    adicionais: ['Balde com gelo'],
-  },
-  {
-    id: 8,
-    categoria: 'Bebidas',
-    nome: 'Suco Natural',
-    preco: 9,
-    adicionais: ['Sem açúcar', 'Com açúcar', 'Mais gelo'],
-  },
-  {
-    id: 9,
-    categoria: 'Acompanhamentos',
-    nome: 'Farofa Especial',
-    preco: 12,
-    adicionais: ['Sem bacon'],
-  },
-  {
-    id: 10,
-    categoria: 'Acompanhamentos',
-    nome: 'Vinagrete',
-    preco: 5,
-    adicionais: ['Sem cebola'],
-  },
-  {
-    id: 11,
-    categoria: 'Entradas',
-    nome: 'Pão de Alho',
-    preco: 8.5,
-    adicionais: ['Com queijo extra'],
-  },
-]
-
-const comandasIniciais = [
-  {
-    id: 1,
-    mesa: 'Mesa 01',
-    cliente: 'Carlos',
-    pessoas: 2,
-    status: STATUS_COMANDA.ABERTA,
-    total: 50.4,
-    criadaEm: '19:02',
-    ultimaAtualizacao: '19:02',
-    garcom: 'João',
-    tipoAtendimento: 'salao',
-    itens: [
-      {
-        id: 1,
-        produtoId: 1,
-        nome: 'Espeto de Carne',
-        qtd: 2,
-        valor: 12,
-        adicionais: ['Pimenta'],
-        observacao: '',
-        statusItem: STATUS_ITEM.LANCADO,
-      },
-      {
-        id: 2,
-        produtoId: 6,
-        nome: 'Coca-Cola 600ml',
-        qtd: 1,
-        valor: 7.5,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.LANCADO,
-      },
-      {
-        id: 3,
-        produtoId: 10,
-        nome: 'Vinagrete',
-        qtd: 2,
-        valor: 5,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.LANCADO,
-      },
-    ],
-  },
-  {
-    id: 2,
-    mesa: 'Mesa 02',
-    cliente: 'Fernanda',
-    pessoas: 4,
-    status: STATUS_COMANDA.PREPARO,
-    total: 87,
-    criadaEm: '19:15',
-    ultimaAtualizacao: '19:19',
-    garcom: 'Marcos',
-    tipoAtendimento: 'salao',
-    itens: [
-      {
-        id: 1,
-        produtoId: 2,
-        nome: 'Espeto de Frango',
-        qtd: 4,
-        valor: 11,
-        adicionais: ['Molho especial'],
-        observacao: '',
-        statusItem: STATUS_ITEM.EM_PREPARO,
-      },
-      {
-        id: 2,
-        produtoId: 8,
-        nome: 'Suco Natural',
-        qtd: 2,
-        valor: 9,
-        adicionais: ['Sem açúcar'],
-        observacao: '',
-        statusItem: STATUS_ITEM.LANCADO,
-      },
-      {
-        id: 3,
-        produtoId: 9,
-        nome: 'Farofa Especial',
-        qtd: 2,
-        valor: 12,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.LANCADO,
-      },
-    ],
-  },
-  {
-    id: 3,
-    mesa: 'Mesa 03',
-    cliente: 'Juliana',
-    pessoas: 3,
-    status: STATUS_COMANDA.PRONTA,
-    total: 58.5,
-    criadaEm: '19:21',
-    ultimaAtualizacao: '19:33',
-    garcom: 'Lucas',
-    tipoAtendimento: 'salao',
-    itens: [
-      {
-        id: 1,
-        produtoId: 3,
-        nome: 'Espeto Medalhão',
-        qtd: 3,
-        valor: 15,
-        adicionais: ['Molho barbecue'],
-        observacao: '',
-        statusItem: STATUS_ITEM.PRONTO,
-      },
-      {
-        id: 2,
-        produtoId: 10,
-        nome: 'Vinagrete',
-        qtd: 1,
-        valor: 5,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.PRONTO,
-      },
-      {
-        id: 3,
-        produtoId: 11,
-        nome: 'Pão de Alho',
-        qtd: 1,
-        valor: 8.5,
-        adicionais: ['Com queijo extra'],
-        observacao: 'Mandar primeiro',
-        statusItem: STATUS_ITEM.PRONTO,
-      },
-    ],
-  },
-  {
-    id: 4,
-    mesa: 'Mesa 04',
-    cliente: '',
-    pessoas: 0,
-    status: STATUS_COMANDA.LIVRE,
-    total: 0,
-    criadaEm: '',
-    ultimaAtualizacao: '',
-    garcom: '',
-    tipoAtendimento: '',
-    itens: [],
-  },
-  {
-    id: 5,
-    mesa: 'Mesa 05',
-    cliente: 'Roberto',
-    pessoas: 5,
-    status: STATUS_COMANDA.FECHAMENTO,
-    total: 101.5,
-    criadaEm: '18:58',
-    ultimaAtualizacao: '19:40',
-    garcom: 'João',
-    tipoAtendimento: 'salao',
-    itens: [
-      {
-        id: 1,
-        produtoId: 5,
-        nome: 'Linguiça Acebolada',
-        qtd: 2,
-        valor: 22,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.ENTREGUE,
-      },
-      {
-        id: 2,
-        produtoId: 7,
-        nome: 'Heineken 600ml',
-        qtd: 3,
-        valor: 16.5,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.ENTREGUE,
-      },
-      {
-        id: 3,
-        produtoId: 10,
-        nome: 'Vinagrete',
-        qtd: 1,
-        valor: 5,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.ENTREGUE,
-      },
-      {
-        id: 4,
-        produtoId: 11,
-        nome: 'Pão de Alho',
-        qtd: 1,
-        valor: 8.5,
-        adicionais: [],
-        observacao: '',
-        statusItem: STATUS_ITEM.ENTREGUE,
-      },
-    ],
-  },
-  {
-    id: 6,
-    mesa: 'Mesa 06',
-    cliente: '',
-    pessoas: 0,
-    status: STATUS_COMANDA.LIVRE,
-    total: 0,
-    criadaEm: '',
-    ultimaAtualizacao: '',
-    garcom: '',
-    tipoAtendimento: '',
-    itens: [],
-  },
-  {
-    id: 7,
-    mesa: 'Mesa 07',
-    cliente: '',
-    pessoas: 0,
-    status: STATUS_COMANDA.LIVRE,
-    total: 0,
-    criadaEm: '',
-    ultimaAtualizacao: '',
-    garcom: '',
-    tipoAtendimento: '',
-    itens: [],
-  },
-  {
-    id: 8,
-    mesa: 'Mesa 08',
-    cliente: '',
-    pessoas: 0,
-    status: STATUS_COMANDA.LIVRE,
-    total: 0,
-    criadaEm: '',
-    ultimaAtualizacao: '',
-    garcom: '',
-    tipoAtendimento: '',
-    itens: [],
-  },
-]
-
-const historicoInicial = [
-  {
-    id: 9001,
-    mesa: 'Mesa 10',
-    cliente: 'Marcos',
-    total: 132.4,
-    pagamento: 'PIX',
-    fechadoEm: '18:40',
-    divisao: 1,
-    valorRecebido: 132.4,
-    troco: 0,
-  },
-  {
-    id: 9002,
-    mesa: 'Mesa 11',
-    cliente: 'Camila',
-    total: 89.9,
-    pagamento: 'Cartão de crédito',
-    fechadoEm: '18:55',
-    divisao: 2,
-    valorRecebido: 89.9,
-    troco: 0,
-  },
-]
 
 const statusConfig = {
-  [STATUS_COMANDA.LIVRE]: {
+  LIVRE: {
     label: 'Livre',
     color: 'default',
     borderColor: '#303030',
     bg: '#141414',
     badge: 'default',
   },
-  [STATUS_COMANDA.ABERTA]: {
+  ABERTA: {
     label: 'Aberta',
     color: 'processing',
     borderColor: '#1677ff',
     bg: '#111a2c',
     badge: 'processing',
   },
-  [STATUS_COMANDA.PREPARO]: {
-    label: 'Em preparo',
-    color: 'warning',
-    borderColor: '#faad14',
-    bg: '#2b2111',
-    badge: 'warning',
-  },
-  [STATUS_COMANDA.PRONTA]: {
-    label: 'Pronta',
+  FECHADA: {
+    label: 'Finalizada',
     color: 'success',
     borderColor: '#52c41a',
     bg: '#162312',
     badge: 'success',
   },
-  [STATUS_COMANDA.FECHAMENTO]: {
-    label: 'Fechamento',
-    color: 'error',
-    borderColor: '#ff4d4f',
-    bg: '#2a1215',
-    badge: 'error',
-  },
-  [STATUS_COMANDA.FINALIZADA]: {
-    label: 'Finalizada',
+  CANCELADA: {
+    label: 'Cancelada',
     color: 'default',
     borderColor: '#434343',
     bg: '#141414',
     badge: 'default',
   },
 }
-
-const etapasStatus = [
-  STATUS_COMANDA.ABERTA,
-  STATUS_COMANDA.PREPARO,
-  STATUS_COMANDA.PRONTA,
-  STATUS_COMANDA.FECHAMENTO,
-]
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString('pt-BR', {
@@ -468,81 +91,171 @@ function formatCurrency(value) {
   })
 }
 
-function calcularTotal(itens) {
-  return itens.reduce((acc, item) => acc + Number(item.qtd) * Number(item.valor), 0)
-}
-
-function gerarHorarioAtual() {
-  const agora = new Date()
-  const horas = String(agora.getHours()).padStart(2, '0')
-  const minutos = String(agora.getMinutes()).padStart(2, '0')
-  return `${horas}:${minutos}`
-}
-
-function getStatusItemTag(statusItem) {
-  const map = {
-    [STATUS_ITEM.LANCADO]: { color: 'default', label: 'Lançado' },
-    [STATUS_ITEM.ENVIADO_COZINHA]: { color: 'processing', label: 'Enviado' },
-    [STATUS_ITEM.EM_PREPARO]: { color: 'warning', label: 'Em preparo' },
-    [STATUS_ITEM.PRONTO]: { color: 'success', label: 'Pronto' },
-    [STATUS_ITEM.ENTREGUE]: { color: 'cyan', label: 'Entregue' },
-    [STATUS_ITEM.CANCELADO]: { color: 'error', label: 'Cancelado' },
+function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem('user')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
   }
+}
 
-  return map[statusItem] || { color: 'default', label: statusItem }
+function getTableDisplayName(table) {
+  if (!table) return '-'
+  return table.nome || `Mesa ${String(table.numero).padStart(2, '0')}`
+}
+
+function getOrderStatus(order) {
+  if (!order) return STATUS_COMANDA.LIVRE
+  if (order.status === 'ABERTA') return STATUS_COMANDA.ABERTA
+  if (order.status === 'FECHADA') return STATUS_COMANDA.FINALIZADA
+  if (order.status === 'CANCELADA') return STATUS_COMANDA.CANCELADA
+  return STATUS_COMANDA.ABERTA
+}
+
+function buildMesas(tables, orders) {
+  return tables
+    .map((table) => {
+      const openOrder = orders.find(
+        (order) => order.tableId === table.id && order.status === 'ABERTA',
+      )
+
+      if (!openOrder) {
+        return {
+          id: table.id,
+          mesaId: table.id,
+          mesa: table.nome || `Mesa ${String(table.numero).padStart(2, '0')}`,
+          numero: table.numero,
+          nome: table.nome,
+          cliente: '',
+          pessoas: 0,
+          status: STATUS_COMANDA.LIVRE,
+          total: 0,
+          criadaEm: '',
+          ultimaAtualizacao: '',
+          garcom: '',
+          tipoAtendimento: 'salao',
+          itens: [],
+          ativo: table.ativo,
+          rawTable: table,
+          rawOrder: null,
+        }
+      }
+
+      return {
+        id: openOrder.id,
+        mesaId: table.id,
+        mesa: openOrder.table?.nome || `Mesa ${String(openOrder.table?.numero || table.numero).padStart(2, '0')}`,
+        numero: table.numero,
+        nome: table.nome,
+        cliente: openOrder.customerName || '',
+        pessoas: 0,
+        status: getOrderStatus(openOrder),
+        total: Number(openOrder.total || 0),
+        criadaEm: openOrder.openedAt || '',
+        ultimaAtualizacao: openOrder.updatedAt || '',
+        garcom: openOrder.createdBy?.name || openOrder.createdBy?.username || '',
+        tipoAtendimento: 'salao',
+        itens: openOrder.items || [],
+        ativo: table.ativo,
+        rawTable: table,
+        rawOrder: openOrder,
+      }
+    })
+    .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0))
 }
 
 export default function Comandas() {
-  const [comandas, setComandas] = useState(comandasIniciais)
-  const [historico, setHistorico] = useState(historicoInicial)
+  const user = getCurrentUser()
 
   const [tabAtiva, setTabAtiva] = useState('comandas')
+
+  const [tables, setTables] = useState([])
+  const [orders, setOrders] = useState([])
+  const [products, setProducts] = useState([])
+
+  const [loadingPage, setLoadingPage] = useState(true)
+  const [loadingAction, setLoadingAction] = useState(false)
+
   const [busca, setBusca] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('todos')
 
-  const primeiraAtiva =
-    comandasIniciais.find((item) => item.status !== STATUS_COMANDA.LIVRE) || null
+  const [comandaSelecionadaId, setComandaSelecionadaId] = useState(null)
 
-  const [comandaSelecionadaId, setComandaSelecionadaId] = useState(
-    primeiraAtiva?.id || null
-  )
-
+  const [modalNovaMesaOpen, setModalNovaMesaOpen] = useState(false)
+  const [modalEditarMesaOpen, setModalEditarMesaOpen] = useState(false)
   const [modalNovaComandaOpen, setModalNovaComandaOpen] = useState(false)
   const [modalAdicionarItemOpen, setModalAdicionarItemOpen] = useState(false)
-  const [modalEditarItemOpen, setModalEditarItemOpen] = useState(false)
-  const [modalTransferenciaOpen, setModalTransferenciaOpen] = useState(false)
   const [modalFechamentoOpen, setModalFechamentoOpen] = useState(false)
   const [modalDividirContaOpen, setModalDividirContaOpen] = useState(false)
 
-  const [itemEditando, setItemEditando] = useState(null)
+  const [mesaEditando, setMesaEditando] = useState(null)
 
+  const [formNovaMesa] = Form.useForm()
+  const [formEditarMesa] = Form.useForm()
   const [formNovaComanda] = Form.useForm()
   const [formAdicionarItem] = Form.useForm()
-  const [formEditarItem] = Form.useForm()
-  const [formTransferencia] = Form.useForm()
   const [formFechamento] = Form.useForm()
   const [formDividirConta] = Form.useForm()
 
-  const comandaSelecionada =
-    comandas.find((item) => item.id === comandaSelecionadaId) || null
+  async function carregarTudo() {
+    try {
+      setLoadingPage(true)
+
+      const [tablesRes, ordersRes, productsRes] = await Promise.all([
+        http.get('/tables'),
+        http.get('/orders'),
+        http.get('/products'),
+      ])
+
+      setTables(tablesRes.data || [])
+      setOrders(ordersRes.data || [])
+      setProducts(productsRes.data || [])
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível carregar os dados.')
+    } finally {
+      setLoadingPage(false)
+    }
+  }
+
+  useEffect(() => {
+    carregarTudo()
+  }, [])
 
   const produtosPorCategoria = useMemo(() => {
-    return produtosMock.reduce((acc, produto) => {
-      if (!acc[produto.categoria]) acc[produto.categoria] = []
-      acc[produto.categoria].push(produto)
+    return products.reduce((acc, produto) => {
+      const categoria = produto.categoriaNome || 'Sem categoria'
+      if (!acc[categoria]) acc[categoria] = []
+      acc[categoria].push(produto)
       return acc
     }, {})
-  }, [])
+  }, [products])
+
+  const comandas = useMemo(() => buildMesas(tables, orders), [tables, orders])
+
+  const primeiraAtiva = useMemo(
+    () => comandas.find((item) => item.status !== STATUS_COMANDA.LIVRE) || null,
+    [comandas],
+  )
+
+  useEffect(() => {
+    if (!comandaSelecionadaId && primeiraAtiva) {
+      setComandaSelecionadaId(primeiraAtiva.id)
+    }
+  }, [comandaSelecionadaId, primeiraAtiva])
+
+  const comandaSelecionada =
+    comandas.find((item) => String(item.id) === String(comandaSelecionadaId)) || null
 
   const comandasFiltradas = useMemo(() => {
     return comandas.filter((comanda) => {
       const texto = busca.toLowerCase()
 
       const matchBusca =
-        comanda.mesa.toLowerCase().includes(texto) ||
-        (comanda.cliente || '').toLowerCase().includes(texto) ||
-        String(comanda.id).includes(texto) ||
-        (comanda.garcom || '').toLowerCase().includes(texto)
+        String(comanda.mesa || '').toLowerCase().includes(texto) ||
+        String(comanda.cliente || '').toLowerCase().includes(texto) ||
+        String(comanda.id || '').includes(texto) ||
+        String(comanda.garcom || '').toLowerCase().includes(texto)
 
       const matchStatus =
         filtroStatus === 'todos' ? true : comanda.status === filtroStatus
@@ -554,46 +267,51 @@ export default function Comandas() {
   const resumo = useMemo(() => {
     return {
       ativas: comandas.filter((item) => item.status !== STATUS_COMANDA.LIVRE).length,
-      preparo: comandas.filter((item) => item.status === STATUS_COMANDA.PREPARO).length,
-      prontas: comandas.filter((item) => item.status === STATUS_COMANDA.PRONTA).length,
+      abertas: comandas.filter((item) => item.status === STATUS_COMANDA.ABERTA).length,
+      finalizadas: orders.filter((item) => item.status === 'FECHADA').length,
       livres: comandas.filter((item) => item.status === STATUS_COMANDA.LIVRE).length,
     }
-  }, [comandas])
+  }, [comandas, orders])
+
+  const mesasLivres = useMemo(
+    () => comandas.filter((item) => item.status === STATUS_COMANDA.LIVRE && item.ativo),
+    [comandas],
+  )
+
+  const mesasOcupadas = useMemo(
+    () => comandas.filter((item) => item.status !== STATUS_COMANDA.LIVRE),
+    [comandas],
+  )
+
+  const historico = useMemo(() => {
+    return orders
+      .filter((item) => item.status === 'FECHADA')
+      .map((item) => ({
+        id: item.id,
+        mesa: getTableDisplayName(item.table),
+        cliente: item.customerName || 'Mesa sem identificação',
+        pagamento: '-',
+        total: Number(item.total || 0),
+        troco: 0,
+        divisao: 1,
+        fechadoEm: item.closedAt || '-',
+      }))
+  }, [orders])
 
   const totaisCaixa = useMemo(() => {
     const totalDia = historico.reduce((acc, item) => acc + item.total, 0)
-    const pix = historico
-      .filter((item) => item.pagamento === 'PIX')
-      .reduce((acc, item) => acc + item.total, 0)
-    const credito = historico
-      .filter((item) => item.pagamento === 'Cartão de crédito')
-      .reduce((acc, item) => acc + item.total, 0)
-    const debito = historico
-      .filter((item) => item.pagamento === 'Cartão de débito')
-      .reduce((acc, item) => acc + item.total, 0)
-    const dinheiro = historico
-      .filter((item) => item.pagamento === 'Dinheiro')
-      .reduce((acc, item) => acc + item.total, 0)
-
-    return { totalDia, pix, credito, debito, dinheiro }
+    return {
+      totalDia,
+      pix: 0,
+      credito: 0,
+      debito: 0,
+      dinheiro: 0,
+    }
   }, [historico])
 
-  const mesasLivres = useMemo(() => {
-    return comandas.filter((item) => item.status === STATUS_COMANDA.LIVRE)
-  }, [comandas])
-
-  const mesasOcupadas = useMemo(() => {
-    return comandas.filter((item) => item.status !== STATUS_COMANDA.LIVRE)
-  }, [comandas])
-
   const produtoSelecionadoId = Form.useWatch('produtoId', formAdicionarItem)
-  const produtoSelecionado = produtosMock.find(
-    (produto) => produto.id === produtoSelecionadoId
-  )
-
-  const produtoEditandoSelecionadoId = Form.useWatch('produtoId', formEditarItem)
-  const produtoEditandoSelecionado = produtosMock.find(
-    (produto) => produto.id === produtoEditandoSelecionadoId
+  const produtoSelecionado = products.find(
+    (produto) => String(produto.id) === String(produtoSelecionadoId),
   )
 
   const pagamentoFechamento = Form.useWatch('pagamento', formFechamento)
@@ -613,23 +331,104 @@ export default function Comandas() {
   const valorDivisaoConta =
     qtdDivisaoAtual > 0 ? totalSelecionado / qtdDivisaoAtual : totalSelecionado
 
-  const atualizarComanda = (id, atualizacao) => {
-    setComandas((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              ...atualizacao,
-              ultimaAtualizacao: gerarHorarioAtual(),
-            }
-          : item
-      )
-    )
-  }
-
   const selecionarComanda = (comanda) => {
     setComandaSelecionadaId(comanda.id)
     setTabAtiva('comandas')
+  }
+
+  const abrirModalNovaMesa = () => {
+    formNovaMesa.resetFields()
+    setModalNovaMesaOpen(true)
+  }
+
+  const salvarNovaMesa = async () => {
+    try {
+      const values = await formNovaMesa.validateFields()
+      setLoadingAction(true)
+
+      const { data } = await http.post('/tables', {
+        numero: values.numero,
+        nome: values.nome || null,
+      })
+
+      setTables((prev) => [...prev, data].sort((a, b) => Number(a.numero) - Number(b.numero)))
+      setModalNovaMesaOpen(false)
+      formNovaMesa.resetFields()
+      message.success('Mesa cadastrada com sucesso')
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível cadastrar a mesa.')
+      }
+    } finally {
+      setLoadingAction(false)
+    }
+  }
+
+  const abrirEditarMesa = (mesa) => {
+    setMesaEditando(mesa)
+    formEditarMesa.resetFields()
+    formEditarMesa.setFieldsValue({
+      numero: mesa.numero,
+      nome: mesa.nome || '',
+      status: mesa.rawTable?.status || 'LIVRE',
+    })
+    setModalEditarMesaOpen(true)
+  }
+
+  const salvarEdicaoMesa = async () => {
+    try {
+      const values = await formEditarMesa.validateFields()
+      if (!mesaEditando?.mesaId) return
+
+      setLoadingAction(true)
+
+      const { data } = await http.put(`/tables/${mesaEditando.mesaId}`, {
+        numero: values.numero,
+        nome: values.nome || null,
+        status: values.status,
+      })
+
+      setTables((prev) =>
+        prev
+          .map((item) => (item.id === mesaEditando.mesaId ? data : item))
+          .sort((a, b) => Number(a.numero) - Number(b.numero)),
+      )
+
+      setModalEditarMesaOpen(false)
+      setMesaEditando(null)
+      message.success('Mesa atualizada com sucesso')
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível atualizar a mesa.')
+      }
+    } finally {
+      setLoadingAction(false)
+    }
+  }
+
+  const alternarStatusMesa = async (mesa) => {
+    try {
+      if (mesa.status !== STATUS_COMANDA.LIVRE) {
+        message.warning('Não é possível inativar uma mesa com comanda aberta.')
+        return
+      }
+
+      setLoadingAction(true)
+
+      const { data } = await http.patch(`/tables/${mesa.mesaId}/status`)
+
+      setTables((prev) =>
+        prev
+          .map((item) => (item.id === mesa.mesaId ? data : item))
+          .sort((a, b) => Number(a.numero) - Number(b.numero)),
+      )
+
+      message.success(`Mesa ${mesa.ativo ? 'inativada' : 'ativada'} com sucesso`)
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível alterar a mesa.')
+    } finally {
+      setLoadingAction(false)
+    }
   }
 
   const abrirModalNovaComanda = () => {
@@ -637,6 +436,7 @@ export default function Comandas() {
     formNovaComanda.setFieldsValue({
       pessoas: 1,
       tipoAtendimento: 'salao',
+      garcom: user?.name || user?.username || '',
     })
     setModalNovaComandaOpen(true)
   }
@@ -644,49 +444,36 @@ export default function Comandas() {
   const salvarNovaComanda = async () => {
     try {
       const values = await formNovaComanda.validateFields()
+      setLoadingAction(true)
 
-      const mesaExistente = comandas.find((item) => item.mesa === values.mesa)
-      if (!mesaExistente) {
+      const mesa = mesasLivres.find((item) => item.mesa === values.mesa)
+
+      if (!mesa) {
         message.error('Mesa não encontrada')
         return
       }
 
-      if (mesaExistente.status !== STATUS_COMANDA.LIVRE) {
-        message.error('Essa mesa já está ocupada')
-        return
-      }
+      const { data } = await http.post('/orders', {
+        tableId: mesa.mesaId,
+        customerName: values.cliente || null,
+        notes: values.observacao || null,
+      })
 
-      const novoId = Math.max(...comandas.map((item) => Number(item.id)), 0) + 1
-      const horario = gerarHorarioAtual()
-
-      setComandas((prev) =>
-        prev.map((item) =>
-          item.mesa === values.mesa
-            ? {
-                ...item,
-                id: novoId,
-                cliente: values.cliente || 'Mesa sem identificação',
-                pessoas: values.pessoas,
-                status: STATUS_COMANDA.ABERTA,
-                criadaEm: horario,
-                ultimaAtualizacao: horario,
-                garcom: values.garcom,
-                tipoAtendimento: values.tipoAtendimento,
-                itens: [],
-                total: 0,
-              }
-            : item
-        )
-      )
-
-      setComandaSelecionadaId(novoId)
+      setOrders((prev) => [data, ...prev])
+      setComandaSelecionadaId(data.id)
       setModalNovaComandaOpen(false)
       message.success('Nova comanda aberta com sucesso')
-    } catch (error) {}
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível abrir a comanda.')
+      }
+    } finally {
+      setLoadingAction(false)
+    }
   }
 
   const abrirModalAdicionarItem = () => {
-    if (!comandaSelecionada || comandaSelecionada.status === STATUS_COMANDA.LIVRE) {
+    if (!comandaSelecionada?.rawOrder) {
       message.warning('Selecione uma comanda ativa')
       return
     }
@@ -694,7 +481,6 @@ export default function Comandas() {
     formAdicionarItem.resetFields()
     formAdicionarItem.setFieldsValue({
       qtd: 1,
-      adicionais: [],
       observacao: '',
     })
     setModalAdicionarItemOpen(true)
@@ -703,295 +489,67 @@ export default function Comandas() {
   const salvarNovoItem = async () => {
     try {
       const values = await formAdicionarItem.validateFields()
-      const produto = produtosMock.find((item) => item.id === values.produtoId)
+      if (!comandaSelecionada?.rawOrder) return
 
-      if (!produto || !comandaSelecionada) return
+      setLoadingAction(true)
 
-      const novoItem = {
-        id: Date.now(),
-        produtoId: produto.id,
-        nome: produto.nome,
-        qtd: values.qtd,
-        valor: produto.preco,
-        adicionais: values.adicionais || [],
-        observacao: values.observacao || '',
-        statusItem: STATUS_ITEM.LANCADO,
-      }
+      const { data } = await http.post(`/orders/${comandaSelecionada.rawOrder.id}/items`, {
+        productId: values.produtoId,
+        quantity: values.qtd,
+        notes: values.observacao || '',
+      })
 
-      setComandas((prev) =>
-        prev.map((item) => {
-          if (item.id !== comandaSelecionada.id) return item
-
-          const novosItens = [...item.itens, novoItem]
-
-          return {
-            ...item,
-            itens: novosItens,
-            total: calcularTotal(novosItens),
-            ultimaAtualizacao: gerarHorarioAtual(),
-          }
-        })
+      setOrders((prev) =>
+        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
       )
 
       setModalAdicionarItemOpen(false)
       message.success('Item adicionado à comanda')
-    } catch (error) {}
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível adicionar o item.')
+      }
+    } finally {
+      setLoadingAction(false)
+    }
   }
 
-  const abrirModalEditarItem = (item) => {
-    if (!comandaSelecionada) return
+  const removerItem = async (itemId) => {
+    if (!comandaSelecionada?.rawOrder) return
 
-    setItemEditando(item)
-
-    const produtoOriginal = produtosMock.find((p) => p.id === item.produtoId)
-
-    formEditarItem.resetFields()
-    formEditarItem.setFieldsValue({
-      categoria: produtoOriginal?.categoria,
-      produtoId: item.produtoId,
-      qtd: item.qtd,
-      adicionais: item.adicionais || [],
-      observacao: item.observacao || '',
-      statusItem: item.statusItem,
-    })
-
-    setModalEditarItemOpen(true)
-  }
-
-  const salvarEdicaoItem = async () => {
     try {
-      const values = await formEditarItem.validateFields()
-      if (!comandaSelecionada || !itemEditando) return
+      setLoadingAction(true)
 
-      const produto = produtosMock.find((item) => item.id === values.produtoId)
-      if (!produto) return
-
-      setComandas((prev) =>
-        prev.map((comanda) => {
-          if (comanda.id !== comandaSelecionada.id) return comanda
-
-          const novosItens = comanda.itens.map((item) =>
-            item.id === itemEditando.id
-              ? {
-                  ...item,
-                  produtoId: produto.id,
-                  nome: produto.nome,
-                  qtd: values.qtd,
-                  valor: produto.preco,
-                  adicionais: values.adicionais || [],
-                  observacao: values.observacao || '',
-                  statusItem: values.statusItem,
-                }
-              : item
-          )
-
-          return {
-            ...comanda,
-            itens: novosItens,
-            total: calcularTotal(novosItens),
-            ultimaAtualizacao: gerarHorarioAtual(),
-          }
-        })
+      const { data } = await http.patch(
+        `/orders/${comandaSelecionada.rawOrder.id}/items/${itemId}/cancel`,
+        {
+          notes: 'Cancelado pelo usuário',
+        },
       )
 
-      setItemEditando(null)
-      setModalEditarItemOpen(false)
-      message.success('Item atualizado com sucesso')
-    } catch (error) {}
-  }
+      setOrders((prev) =>
+        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
+      )
 
-  const removerItem = (itemId) => {
-    if (!comandaSelecionada) return
-
-    setComandas((prev) =>
-      prev.map((item) => {
-        if (item.id !== comandaSelecionada.id) return item
-
-        const novosItens = item.itens.filter((i) => i.id !== itemId)
-
-        return {
-          ...item,
-          itens: novosItens,
-          total: calcularTotal(novosItens),
-          ultimaAtualizacao: gerarHorarioAtual(),
-        }
-      })
-    )
-
-    message.success('Item removido')
+      message.success('Item cancelado')
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Não foi possível cancelar o item.')
+    } finally {
+      setLoadingAction(false)
+    }
   }
 
   const enviarParaCozinha = () => {
-    if (!comandaSelecionada) return
-
-    if (!comandaSelecionada.itens.length) {
-      message.warning('Adicione itens antes de enviar para a cozinha')
-      return
-    }
-
-    setComandas((prev) =>
-      prev.map((item) => {
-        if (item.id !== comandaSelecionada.id) return item
-
-        return {
-          ...item,
-          status: STATUS_COMANDA.PREPARO,
-          ultimaAtualizacao: gerarHorarioAtual(),
-          itens: item.itens.map((produto) =>
-            produto.statusItem === STATUS_ITEM.LANCADO
-              ? { ...produto, statusItem: STATUS_ITEM.ENVIADO_COZINHA }
-              : produto
-          ),
-        }
-      })
-    )
-
-    message.success('Pedido enviado para a cozinha')
-  }
-
-  const avancarStatus = () => {
-    if (!comandaSelecionada) return
-    if (comandaSelecionada.status === STATUS_COMANDA.LIVRE) return
-
-    const indice = etapasStatus.indexOf(comandaSelecionada.status)
-    if (indice === -1 || indice === etapasStatus.length - 1) {
-      message.info('Essa comanda já está na última etapa operacional')
-      return
-    }
-
-    const novoStatus = etapasStatus[indice + 1]
-
-    setComandas((prev) =>
-      prev.map((item) => {
-        if (item.id !== comandaSelecionada.id) return item
-
-        let itensAtualizados = item.itens
-
-        if (novoStatus === STATUS_COMANDA.PREPARO) {
-          itensAtualizados = item.itens.map((produto) => ({
-            ...produto,
-            statusItem:
-              produto.statusItem === STATUS_ITEM.LANCADO
-                ? STATUS_ITEM.EM_PREPARO
-                : produto.statusItem,
-          }))
-        }
-
-        if (novoStatus === STATUS_COMANDA.PRONTA) {
-          itensAtualizados = item.itens.map((produto) => ({
-            ...produto,
-            statusItem:
-              produto.statusItem === STATUS_ITEM.EM_PREPARO ||
-              produto.statusItem === STATUS_ITEM.ENVIADO_COZINHA
-                ? STATUS_ITEM.PRONTO
-                : produto.statusItem,
-          }))
-        }
-
-        if (novoStatus === STATUS_COMANDA.FECHAMENTO) {
-          itensAtualizados = item.itens.map((produto) => ({
-            ...produto,
-            statusItem:
-              produto.statusItem === STATUS_ITEM.PRONTO
-                ? STATUS_ITEM.ENTREGUE
-                : produto.statusItem,
-          }))
-        }
-
-        return {
-          ...item,
-          status: novoStatus,
-          ultimaAtualizacao: gerarHorarioAtual(),
-          itens: itensAtualizados,
-        }
-      })
-    )
-
-    message.success('Status atualizado com sucesso')
-  }
-
-  const voltarStatus = () => {
-    if (!comandaSelecionada) return
-    if (comandaSelecionada.status === STATUS_COMANDA.LIVRE) return
-
-    const indice = etapasStatus.indexOf(comandaSelecionada.status)
-    if (indice <= 0) {
-      message.info('Essa comanda já está na primeira etapa')
-      return
-    }
-
-    const novoStatus = etapasStatus[indice - 1]
-    atualizarComanda(comandaSelecionada.id, { status: novoStatus })
-    message.success('Status atualizado com sucesso')
-  }
-
-  const abrirTransferencia = () => {
-    if (!comandaSelecionada || comandaSelecionada.status === STATUS_COMANDA.LIVRE) {
+    if (!comandaSelecionada?.rawOrder) {
       message.warning('Selecione uma comanda ativa')
       return
     }
 
-    formTransferencia.resetFields()
-    setModalTransferenciaOpen(true)
-  }
-
-  const confirmarTransferencia = async () => {
-    try {
-      const values = await formTransferencia.validateFields()
-      if (!comandaSelecionada) return
-
-      const destino = comandas.find((item) => item.mesa === values.novaMesa)
-
-      if (!destino) {
-        message.error('Mesa de destino não encontrada')
-        return
-      }
-
-      if (destino.status !== STATUS_COMANDA.LIVRE) {
-        message.error('A mesa de destino já está ocupada')
-        return
-      }
-
-      const mesaAtual = comandaSelecionada.mesa
-      const horario = gerarHorarioAtual()
-
-      setComandas((prev) =>
-        prev.map((item) => {
-          if (item.id === comandaSelecionada.id) {
-            return {
-              ...item,
-              mesa: values.novaMesa,
-              ultimaAtualizacao: horario,
-            }
-          }
-
-          if (item.mesa === values.novaMesa && item.status === STATUS_COMANDA.LIVRE) {
-            return {
-              ...item,
-              mesa: mesaAtual,
-              cliente: '',
-              pessoas: 0,
-              status: STATUS_COMANDA.LIVRE,
-              total: 0,
-              criadaEm: '',
-              ultimaAtualizacao: '',
-              garcom: '',
-              tipoAtendimento: '',
-              itens: [],
-            }
-          }
-
-          return item
-        })
-      )
-
-      setModalTransferenciaOpen(false)
-      message.success('Mesa transferida com sucesso')
-    } catch (error) {}
+    message.info('A integração da cozinha será ligada no próximo passo.')
   }
 
   const abrirFechamento = () => {
-    if (!comandaSelecionada || comandaSelecionada.status === STATUS_COMANDA.LIVRE) {
+    if (!comandaSelecionada?.rawOrder) {
       message.warning('Selecione uma comanda ativa')
       return
     }
@@ -1013,7 +571,7 @@ export default function Comandas() {
   const confirmarFechamento = async () => {
     try {
       const values = await formFechamento.validateFields()
-      if (!comandaSelecionada) return
+      if (!comandaSelecionada?.rawOrder) return
 
       const total = Number(comandaSelecionada.total)
       const valorRecebido = Number(values.valorRecebido || 0)
@@ -1024,62 +582,42 @@ export default function Comandas() {
         return
       }
 
-      const troco = pagamentoDinheiro ? valorRecebido - total : 0
+      setLoadingAction(true)
 
-      const registroHistorico = {
-        id: Date.now(),
-        mesa: comandaSelecionada.mesa,
-        cliente: comandaSelecionada.cliente || 'Mesa sem identificação',
-        total,
-        pagamento: values.pagamento,
-        fechadoEm: gerarHorarioAtual(),
-        divisao: Number(values.divisao || 1),
-        valorRecebido: pagamentoDinheiro ? valorRecebido : total,
-        troco,
-      }
+      const { data } = await http.patch(`/orders/${comandaSelecionada.rawOrder.id}/close`)
 
-      setHistorico((prev) => [registroHistorico, ...prev])
-
-      setComandas((prev) =>
-        prev.map((item) =>
-          item.id === comandaSelecionada.id
-            ? {
-                ...item,
-                cliente: '',
-                pessoas: 0,
-                status: STATUS_COMANDA.LIVRE,
-                total: 0,
-                criadaEm: '',
-                ultimaAtualizacao: '',
-                garcom: '',
-                tipoAtendimento: '',
-                itens: [],
-              }
-            : item
-        )
+      setOrders((prev) =>
+        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
       )
 
       const proximaComanda =
         comandas.find(
           (item) =>
-            item.id !== comandaSelecionada.id && item.status !== STATUS_COMANDA.LIVRE
+            String(item.id) !== String(comandaSelecionada.rawOrder.id) &&
+            item.status !== STATUS_COMANDA.LIVRE,
         ) || null
 
       setComandaSelecionadaId(proximaComanda?.id || null)
       setModalFechamentoOpen(false)
       message.success('Conta fechada com sucesso')
-    } catch (error) {}
+    } catch (error) {
+      if (!error?.errorFields) {
+        message.error(error?.response?.data?.message || 'Não foi possível fechar a comanda.')
+      }
+    } finally {
+      setLoadingAction(false)
+    }
   }
 
   const abrirDividirConta = () => {
-    if (!comandaSelecionada || comandaSelecionada.status === STATUS_COMANDA.LIVRE) {
+    if (!comandaSelecionada?.rawOrder) {
       message.warning('Selecione uma comanda ativa')
       return
     }
 
     formDividirConta.resetFields()
     formDividirConta.setFieldsValue({
-      qtdPessoas: comandaSelecionada.pessoas || 1,
+      qtdPessoas: 1,
     })
     setModalDividirContaOpen(true)
   }
@@ -1090,25 +628,30 @@ export default function Comandas() {
       dataIndex: 'mesa',
     },
     {
+      title: 'Número',
+      dataIndex: 'numero',
+    },
+    {
       title: 'Cliente',
       dataIndex: 'cliente',
       render: (_, record) => record.cliente || '-',
     },
     {
-      title: 'Garçom',
-      dataIndex: 'garcom',
-      render: (value) => value || '-',
-    },
-    {
-      title: 'Pessoas',
-      dataIndex: 'pessoas',
-      render: (value) => value || '-',
-    },
-    {
       title: 'Status',
       dataIndex: 'status',
       render: (status) => (
-        <Tag color={statusConfig[status].color}>{statusConfig[status].label}</Tag>
+        <Tag color={statusConfig[status]?.color || 'default'}>
+          {statusConfig[status]?.label || status}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Ativa',
+      dataIndex: 'ativo',
+      render: (ativo) => (
+        <Tag color={ativo ? 'success' : 'default'}>
+          {ativo ? 'Sim' : 'Não'}
+        </Tag>
       ),
     },
     {
@@ -1119,9 +662,20 @@ export default function Comandas() {
     {
       title: 'Ações',
       render: (_, record) => (
-        <Button type="link" onClick={() => selecionarComanda(record)}>
-          Ver comanda
-        </Button>
+        <Space>
+          <Button type="link" onClick={() => selecionarComanda(record)}>
+            Ver
+          </Button>
+          <Button type="link" icon={<EditOutlined />} onClick={() => abrirEditarMesa(record)}>
+            Editar
+          </Button>
+          <Popconfirm
+            title={record.ativo ? 'Inativar mesa?' : 'Ativar mesa?'}
+            onConfirm={() => alternarStatusMesa(record)}
+          >
+            <Button type="link">{record.ativo ? 'Inativar' : 'Ativar'}</Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ]
@@ -1130,7 +684,7 @@ export default function Comandas() {
     {
       title: 'Comanda',
       dataIndex: 'id',
-      render: (id) => `#${id}`,
+      render: (id) => `#${String(id).slice(-6)}`,
     },
     {
       title: 'Mesa',
@@ -1165,7 +719,7 @@ export default function Comandas() {
     {
       title: 'Comanda',
       dataIndex: 'id',
-      render: (id) => `#${id}`,
+      render: (id) => `#${String(id).slice(-6)}`,
     },
     {
       title: 'Mesa',
@@ -1224,7 +778,7 @@ export default function Comandas() {
                   />
                 </Col>
 
-                <Col xs={24} md={8}>
+                <Col xs={24} md={7}>
                   <Select
                     size="large"
                     style={{ width: '100%' }}
@@ -1234,30 +788,39 @@ export default function Comandas() {
                       { label: 'Todos os status', value: 'todos' },
                       { label: 'Livre', value: STATUS_COMANDA.LIVRE },
                       { label: 'Aberta', value: STATUS_COMANDA.ABERTA },
-                      { label: 'Em preparo', value: STATUS_COMANDA.PREPARO },
-                      { label: 'Pronta', value: STATUS_COMANDA.PRONTA },
-                      { label: 'Fechamento', value: STATUS_COMANDA.FECHAMENTO },
+                      { label: 'Finalizada', value: STATUS_COMANDA.FINALIZADA },
+                      { label: 'Cancelada', value: STATUS_COMANDA.CANCELADA },
                     ]}
                   />
                 </Col>
 
-                <Col xs={24} md={6}>
-                  <Button
-                    type="primary"
-                    size="large"
-                    block
-                    icon={<PlusOutlined />}
-                    onClick={abrirModalNovaComanda}
-                  >
-                    Nova comanda
-                  </Button>
+                <Col xs={24} md={7}>
+                  <Space style={{ width: '100%' }}>
+                    <Button
+                      type="default"
+                      size="large"
+                      icon={<TableOutlined />}
+                      onClick={abrirModalNovaMesa}
+                    >
+                      Nova mesa
+                    </Button>
+
+                    <Button
+                      type="primary"
+                      size="large"
+                      icon={<PlusOutlined />}
+                      onClick={abrirModalNovaComanda}
+                    >
+                      Nova comanda
+                    </Button>
+                  </Space>
                 </Col>
               </Row>
 
               <Row gutter={[16, 16]}>
                 {comandasFiltradas.map((comanda) => {
-                  const status = statusConfig[comanda.status]
-                  const selecionada = comandaSelecionada?.id === comanda.id
+                  const status = statusConfig[comanda.status] || statusConfig.LIVRE
+                  const selecionada = String(comandaSelecionada?.id) === String(comanda.id)
 
                   return (
                     <Col xs={24} sm={12} lg={8} key={`${comanda.mesa}-${comanda.id}`}>
@@ -1273,6 +836,7 @@ export default function Comandas() {
                           boxShadow: selecionada
                             ? '0 0 0 1px rgba(250,84,28,0.15)'
                             : 'none',
+                          opacity: comanda.ativo ? 1 : 0.6,
                         }}
                         styles={{ body: { padding: 16 } }}
                       >
@@ -1292,7 +856,9 @@ export default function Comandas() {
                               {comanda.mesa}
                             </Title>
                             <Text style={{ color: '#bfbfbf' }}>
-                              Comanda #{comanda.id}
+                              {comanda.rawOrder
+                                ? `Comanda #${String(comanda.rawOrder.id).slice(-6)}`
+                                : 'Sem comanda'}
                             </Text>
                           </div>
 
@@ -1312,17 +878,7 @@ export default function Comandas() {
                           </Text>
 
                           <Text style={{ color: '#d9d9d9' }}>
-                            <strong>Atendimento:</strong>{' '}
-                            {comanda.tipoAtendimento === 'balcao' ? 'Balcão' : 'Salão'}
-                          </Text>
-
-                          <Text style={{ color: '#d9d9d9' }}>
-                            <strong>Pessoas:</strong> {comanda.pessoas || '-'}
-                          </Text>
-
-                          <Text style={{ color: '#d9d9d9' }}>
-                            <strong>Atualização:</strong>{' '}
-                            {comanda.ultimaAtualizacao || '-'}
+                            <strong>Mesa ativa:</strong> {comanda.ativo ? 'Sim' : 'Não'}
                           </Text>
 
                           <Text style={{ color: '#d9d9d9' }}>
@@ -1349,7 +905,11 @@ export default function Comandas() {
               title={
                 <span style={{ color: '#fff' }}>
                   {comandaSelecionada
-                    ? `${comandaSelecionada.mesa} • Comanda #${comandaSelecionada.id}`
+                    ? `${comandaSelecionada.mesa} • ${
+                        comandaSelecionada.rawOrder
+                          ? `Comanda #${String(comandaSelecionada.rawOrder.id).slice(-6)}`
+                          : 'Sem comanda'
+                      }`
                     : 'Detalhes da comanda'}
                 </span>
               }
@@ -1373,26 +933,21 @@ export default function Comandas() {
                         {comandaSelecionada.garcom || '-'}
                       </Space>
                     </Descriptions.Item>
-                    <Descriptions.Item label="Tipo de atendimento">
-                      {comandaSelecionada.tipoAtendimento === 'balcao'
-                        ? 'Balcão'
-                        : 'Salão'}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Pessoas">
-                      {comandaSelecionada.pessoas || '-'}
+                    <Descriptions.Item label="Mesa ativa">
+                      {comandaSelecionada.ativo ? 'Sim' : 'Não'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Abertura">
-                      {comandaSelecionada.criadaEm || '-'}
+                      {comandaSelecionada.rawOrder?.openedAt || '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Última atualização">
-                      {comandaSelecionada.ultimaAtualizacao || '-'}
+                      {comandaSelecionada.rawOrder?.updatedAt || '-'}
                     </Descriptions.Item>
                     <Descriptions.Item label="Status">
                       <Badge
-                        status={statusConfig[comandaSelecionada.status].badge}
+                        status={statusConfig[comandaSelecionada.status]?.badge || 'default'}
                         text={
                           <span style={{ color: '#d9d9d9' }}>
-                            {statusConfig[comandaSelecionada.status].label}
+                            {statusConfig[comandaSelecionada.status]?.label || comandaSelecionada.status}
                           </span>
                         }
                       />
@@ -1416,24 +971,20 @@ export default function Comandas() {
 
                       <Steps
                         size="small"
-                        current={Math.max(
-                          etapasStatus.indexOf(comandaSelecionada.status),
-                          0
-                        )}
+                        current={comandaSelecionada.status === STATUS_COMANDA.ABERTA ? 0 : 2}
                         items={[
                           { title: 'Aberta' },
-                          { title: 'Preparo' },
-                          { title: 'Pronta' },
+                          { title: 'Itens lançados' },
                           { title: 'Fechamento' },
                         ]}
                       />
 
-                      <Space style={{ marginTop: 12 }}>
-                        <Button onClick={voltarStatus}>Voltar etapa</Button>
-                        <Button type="primary" onClick={avancarStatus}>
-                          Avançar etapa
-                        </Button>
-                      </Space>
+                      <Alert
+                        type="info"
+                        showIcon
+                        style={{ marginTop: 12 }}
+                        message="A visualização da cozinha será ligada na próxima etapa."
+                      />
                     </>
                   )}
 
@@ -1466,7 +1017,10 @@ export default function Comandas() {
                     locale={{ emptyText: 'Nenhum item nesta comanda' }}
                     dataSource={comandaSelecionada.itens}
                     renderItem={(item) => {
-                      const statusItemConfig = getStatusItemTag(item.statusItem)
+                      const statusItemConfig =
+                        item.status === 'CANCELADO'
+                          ? { color: 'error', label: 'Cancelado' }
+                          : { color: 'success', label: 'Ativo' }
 
                       return (
                         <List.Item
@@ -1475,23 +1029,16 @@ export default function Comandas() {
                             borderBottom: '1px solid #262626',
                           }}
                           actions={
-                            comandaSelecionada.status !== STATUS_COMANDA.LIVRE
+                            comandaSelecionada.status !== STATUS_COMANDA.LIVRE &&
+                            item.status !== 'CANCELADO'
                               ? [
-                                  <Button
-                                    key="edit"
-                                    type="link"
-                                    icon={<EditOutlined />}
-                                    onClick={() => abrirModalEditarItem(item)}
-                                  >
-                                    Editar
-                                  </Button>,
                                   <Popconfirm
                                     key="remove"
-                                    title="Remover item?"
+                                    title="Cancelar item?"
                                     onConfirm={() => removerItem(item.id)}
                                   >
                                     <Button type="link" danger>
-                                      Remover
+                                      Cancelar
                                     </Button>
                                   </Popconfirm>,
                                 ]
@@ -1508,10 +1055,10 @@ export default function Comandas() {
                               }}
                             >
                               <Text style={{ color: '#f5f5f5' }}>
-                                {item.qtd}x {item.nome}
+                                {item.quantity}x {item.productName}
                               </Text>
                               <Text style={{ color: '#f5f5f5', fontWeight: 600 }}>
-                                {formatCurrency(item.qtd * item.valor)}
+                                {formatCurrency(item.totalPrice)}
                               </Text>
                             </div>
 
@@ -1523,22 +1070,14 @@ export default function Comandas() {
 
                             <div>
                               <Text style={{ color: '#8c8c8c', fontSize: 12 }}>
-                                Unitário: {formatCurrency(item.valor)}
+                                Unitário: {formatCurrency(item.unitPrice)}
                               </Text>
                             </div>
 
-                            {!!item.adicionais?.length && (
+                            {!!item.notes && (
                               <div>
                                 <Text style={{ color: '#8c8c8c', fontSize: 12 }}>
-                                  Adicionais: {item.adicionais.join(', ')}
-                                </Text>
-                              </div>
-                            )}
-
-                            {!!item.observacao && (
-                              <div>
-                                <Text style={{ color: '#8c8c8c', fontSize: 12 }}>
-                                  Obs.: {item.observacao}
+                                  Obs.: {item.notes}
                                 </Text>
                               </div>
                             )}
@@ -1596,16 +1135,6 @@ export default function Comandas() {
                     <Button
                       size="large"
                       block
-                      icon={<SwapOutlined />}
-                      onClick={abrirTransferencia}
-                      disabled={comandaSelecionada.status === STATUS_COMANDA.LIVRE}
-                    >
-                      Transferir mesa
-                    </Button>
-
-                    <Button
-                      size="large"
-                      block
                       icon={<CheckCircleOutlined />}
                       onClick={abrirDividirConta}
                       disabled={comandaSelecionada.status === STATUS_COMANDA.LIVRE}
@@ -1651,10 +1180,18 @@ export default function Comandas() {
       ),
       children: (
         <Row gutter={[16, 16]}>
-          <Col xs={24} xl={14}>
-            <Card bordered={false} title="Visão geral das mesas">
+          <Col xs={24} xl={16}>
+            <Card
+              bordered={false}
+              title="Visão geral das mesas"
+              extra={
+                <Button type="primary" icon={<PlusOutlined />} onClick={abrirModalNovaMesa}>
+                  Nova mesa
+                </Button>
+              }
+            >
               <Table
-                rowKey={(record) => `${record.mesa}-${record.id}`}
+                rowKey={(record) => `${record.mesa}-${record.mesaId}`}
                 columns={mesasTabColumns}
                 dataSource={comandas}
                 pagination={false}
@@ -1662,7 +1199,7 @@ export default function Comandas() {
             </Card>
           </Col>
 
-          <Col xs={24} xl={10}>
+          <Col xs={24} xl={8}>
             <Row gutter={[16, 16]}>
               <Col span={24}>
                 <Card bordered={false}>
@@ -1678,7 +1215,7 @@ export default function Comandas() {
                 <Card bordered={false} title="Mesas livres agora">
                   <Space wrap>
                     {mesasLivres.map((mesa) => (
-                      <Tag key={mesa.mesa} style={{ padding: '6px 10px' }}>
+                      <Tag key={mesa.mesaId} style={{ padding: '6px 10px' }}>
                         {mesa.mesa}
                       </Tag>
                     ))}
@@ -1711,12 +1248,7 @@ export default function Comandas() {
           </Col>
           <Col xs={24} md={12} xl={6}>
             <Card bordered={false}>
-              <Statistic
-                title="PIX"
-                value={totaisCaixa.pix}
-                precision={2}
-                prefix="R$"
-              />
+              <Statistic title="PIX" value={totaisCaixa.pix} precision={2} prefix="R$" />
             </Card>
           </Col>
           <Col xs={24} md={12} xl={6}>
@@ -1773,6 +1305,29 @@ export default function Comandas() {
     },
   ]
 
+  if (loadingPage) {
+    return (
+      <>
+        <PageTitle
+          title="Comandas"
+          subtitle="Controle de mesas, consumo, envio para cozinha, caixa e histórico"
+        />
+        <Card bordered={false}>
+          <div
+            style={{
+              minHeight: 300,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Spin size="large" />
+          </div>
+        </Card>
+      </>
+    )
+  }
+
   return (
     <>
       <PageTitle
@@ -1789,13 +1344,13 @@ export default function Comandas() {
 
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false}>
-            <Statistic title="Em preparo" value={resumo.preparo} />
+            <Statistic title="Abertas" value={resumo.abertas} />
           </Card>
         </Col>
 
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false}>
-            <Statistic title="Prontas" value={resumo.prontas} />
+            <Statistic title="Finalizadas" value={resumo.finalizadas} />
           </Card>
         </Col>
 
@@ -1811,12 +1366,79 @@ export default function Comandas() {
       </Card>
 
       <Modal
+        title="Nova mesa"
+        open={modalNovaMesaOpen}
+        onCancel={() => setModalNovaMesaOpen(false)}
+        onOk={salvarNovaMesa}
+        okText="Cadastrar mesa"
+        cancelText="Cancelar"
+        confirmLoading={loadingAction}
+      >
+        <Form form={formNovaMesa} layout="vertical">
+          <Form.Item
+            label="Número da mesa"
+            name="numero"
+            rules={[{ required: true, message: 'Informe o número da mesa' }]}
+          >
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item label="Nome da mesa" name="nome">
+            <Input placeholder="Ex.: Área externa / Mesa 01" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="Editar mesa"
+        open={modalEditarMesaOpen}
+        onCancel={() => {
+          setModalEditarMesaOpen(false)
+          setMesaEditando(null)
+        }}
+        onOk={salvarEdicaoMesa}
+        okText="Salvar alterações"
+        cancelText="Cancelar"
+        confirmLoading={loadingAction}
+      >
+        <Form form={formEditarMesa} layout="vertical">
+          <Form.Item
+            label="Número da mesa"
+            name="numero"
+            rules={[{ required: true, message: 'Informe o número da mesa' }]}
+          >
+            <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item label="Nome da mesa" name="nome">
+            <Input placeholder="Ex.: Área externa / Mesa 01" />
+          </Form.Item>
+
+          <Form.Item
+            label="Status físico da mesa"
+            name="status"
+            rules={[{ required: true, message: 'Selecione o status' }]}
+          >
+            <Select
+              options={[
+                { label: 'Livre', value: 'LIVRE' },
+                { label: 'Ocupada', value: 'OCUPADA' },
+                { label: 'Reservada', value: 'RESERVADA' },
+                { label: 'Inativa', value: 'INATIVA' },
+              ]}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
         title="Nova comanda"
         open={modalNovaComandaOpen}
         onCancel={() => setModalNovaComandaOpen(false)}
         onOk={salvarNovaComanda}
         okText="Abrir comanda"
         cancelText="Cancelar"
+        confirmLoading={loadingAction}
       >
         <Form form={formNovaComanda} layout="vertical">
           <Form.Item
@@ -1865,6 +1487,10 @@ export default function Comandas() {
           >
             <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
+
+          <Form.Item label="Observação" name="observacao">
+            <TextArea rows={3} placeholder="Observação inicial da comanda" />
+          </Form.Item>
         </Form>
       </Modal>
 
@@ -1875,6 +1501,7 @@ export default function Comandas() {
         onOk={salvarNovoItem}
         okText="Adicionar item"
         cancelText="Cancelar"
+        confirmLoading={loadingAction}
       >
         <Form form={formAdicionarItem} layout="vertical">
           <Form.Item
@@ -1891,89 +1518,6 @@ export default function Comandas() {
               onChange={() => {
                 formAdicionarItem.setFieldsValue({
                   produtoId: undefined,
-                  adicionais: [],
-                })
-              }}
-            />
-          </Form.Item>
-
-          <Form.Item shouldUpdate={(prev, curr) => prev.categoria !== curr.categoria} noStyle>
-            {({ getFieldValue }) => {
-              const categoria = getFieldValue('categoria')
-              const produtosDaCategoria = categoria
-                ? produtosPorCategoria[categoria] || []
-                : []
-
-              return (
-                <Form.Item
-                  label="Produto"
-                  name="produtoId"
-                  rules={[{ required: true, message: 'Selecione o produto' }]}
-                >
-                  <Select
-                    placeholder="Selecione o produto"
-                    options={produtosDaCategoria.map((produto) => ({
-                      label: `${produto.nome} • ${formatCurrency(produto.preco)}`,
-                      value: produto.id,
-                    }))}
-                  />
-                </Form.Item>
-              )
-            }}
-          </Form.Item>
-
-          <Form.Item label="Quantidade" name="qtd">
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
-
-          <Form.Item label="Adicionais" name="adicionais">
-            <Select
-              mode="multiple"
-              placeholder="Selecione adicionais"
-              disabled={!produtoSelecionado}
-              options={(produtoSelecionado?.adicionais || []).map((item) => ({
-                label: item,
-                value: item,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item label="Observação" name="observacao">
-            <TextArea
-              rows={3}
-              placeholder="Ex.: sem cebola, mandar junto, ponto da carne..."
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      <Modal
-        title="Editar item"
-        open={modalEditarItemOpen}
-        onCancel={() => {
-          setModalEditarItemOpen(false)
-          setItemEditando(null)
-        }}
-        onOk={salvarEdicaoItem}
-        okText="Salvar alterações"
-        cancelText="Cancelar"
-      >
-        <Form form={formEditarItem} layout="vertical">
-          <Form.Item
-            label="Categoria"
-            name="categoria"
-            rules={[{ required: true, message: 'Selecione a categoria' }]}
-          >
-            <Select
-              placeholder="Selecione a categoria"
-              options={Object.keys(produtosPorCategoria).map((categoria) => ({
-                label: categoria,
-                value: categoria,
-              }))}
-              onChange={() => {
-                formEditarItem.setFieldsValue({
-                  produtoId: undefined,
-                  adicionais: [],
                 })
               }}
             />
@@ -2012,63 +1556,21 @@ export default function Comandas() {
             <InputNumber min={1} style={{ width: '100%' }} />
           </Form.Item>
 
-          <Form.Item label="Adicionais" name="adicionais">
-            <Select
-              mode="multiple"
-              placeholder="Selecione adicionais"
-              disabled={!produtoEditandoSelecionado}
-              options={(produtoEditandoSelecionado?.adicionais || []).map((item) => ({
-                label: item,
-                value: item,
-              }))}
-            />
-          </Form.Item>
-
           <Form.Item label="Observação" name="observacao">
-            <TextArea rows={3} />
-          </Form.Item>
-
-          <Form.Item label="Status do item" name="statusItem">
-            <Select
-              options={[
-                { label: 'Lançado', value: STATUS_ITEM.LANCADO },
-                { label: 'Enviado cozinha', value: STATUS_ITEM.ENVIADO_COZINHA },
-                { label: 'Em preparo', value: STATUS_ITEM.EM_PREPARO },
-                { label: 'Pronto', value: STATUS_ITEM.PRONTO },
-                { label: 'Entregue', value: STATUS_ITEM.ENTREGUE },
-                { label: 'Cancelado', value: STATUS_ITEM.CANCELADO },
-              ]}
+            <TextArea
+              rows={3}
+              placeholder="Ex.: sem cebola, mandar junto, ponto da carne..."
             />
           </Form.Item>
-        </Form>
-      </Modal>
 
-      <Modal
-        title="Transferir mesa"
-        open={modalTransferenciaOpen}
-        onCancel={() => setModalTransferenciaOpen(false)}
-        onOk={confirmarTransferencia}
-        okText="Transferir"
-        cancelText="Cancelar"
-      >
-        <Form form={formTransferencia} layout="vertical">
-          <Form.Item label="Mesa atual">
-            <Input value={comandaSelecionada?.mesa} disabled />
-          </Form.Item>
-
-          <Form.Item
-            label="Nova mesa"
-            name="novaMesa"
-            rules={[{ required: true, message: 'Selecione a nova mesa' }]}
-          >
-            <Select
-              placeholder="Selecione a mesa de destino"
-              options={mesasLivres.map((item) => ({
-                label: item.mesa,
-                value: item.mesa,
-              }))}
+          {produtoSelecionado && (
+            <Alert
+              style={{ marginTop: 8 }}
+              type="info"
+              showIcon
+              message={`Preço unitário: ${formatCurrency(produtoSelecionado.preco)}`}
             />
-          </Form.Item>
+          )}
         </Form>
       </Modal>
 
@@ -2127,10 +1629,14 @@ export default function Comandas() {
         onOk={confirmarFechamento}
         okText="Confirmar fechamento"
         cancelText="Cancelar"
+        confirmLoading={loadingAction}
       >
         <Form form={formFechamento} layout="vertical">
           <Form.Item label="Total da comanda">
-            <Input value={comandaSelecionada ? formatCurrency(comandaSelecionada.total) : ''} disabled />
+            <Input
+              value={comandaSelecionada ? formatCurrency(comandaSelecionada.total) : ''}
+              disabled
+            />
           </Form.Item>
 
           <Form.Item
@@ -2183,12 +1689,7 @@ export default function Comandas() {
           <Form.Item
             label="Valor recebido"
             name="valorRecebido"
-            rules={[
-              {
-                required: true,
-                message: 'Informe o valor recebido',
-              },
-            ]}
+            rules={[{ required: true, message: 'Informe o valor recebido' }]}
           >
             <InputNumber
               min={0}
