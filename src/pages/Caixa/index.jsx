@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
+  Alert,
   Badge,
   Button,
   Card,
   Col,
   DatePicker,
   Divider,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -13,6 +15,7 @@ import {
   Row,
   Select,
   Space,
+  Spin,
   Statistic,
   Table,
   Tabs,
@@ -28,73 +31,45 @@ import {
   InboxOutlined,
   MinusCircleOutlined,
   PlusCircleOutlined,
+  ReloadOutlined,
   SafetyOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
+import http from '@/api/http'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
+const { RangePicker } = DatePicker
 
 const statusColors = {
   ABERTO: 'success',
   FECHADO: 'default',
 }
 
-const initialCaixa = {
-  status: 'ABERTO',
-  operador: 'Alex Sander',
-  dataAbertura: '2026-03-16 18:00',
+const emptyCaixa = {
+  id: null,
+  status: 'FECHADO',
+  operador: '-',
+  operadorId: null,
+  dataAbertura: null,
   dataFechamento: null,
-  fundoInicial: 150,
-  entradas: 2350,
-  saidas: 180,
-  saldoEsperado: 2320,
+  fundoInicial: 0,
+  entradas: 0,
+  saidas: 0,
+  totalVendas: 0,
+  saldoEsperado: 0,
   saldoInformado: 0,
   diferenca: 0,
+  observacaoAbertura: '',
+  observacaoFechamento: '',
+  resumoFormas: {
+    DINHEIRO: 0,
+    PIX: 0,
+    DEBITO: 0,
+    CREDITO: 0,
+    OUTRO: 0,
+  },
 }
-
-const initialMovimentacoes = [
-  {
-    id: 1,
-    dataHora: '2026-03-16 18:15',
-    tipo: 'VENDA',
-    categoria: 'Mesa 03',
-    descricao: 'Pedido mesa 03',
-    formaPagamento: 'PIX',
-    valor: 120,
-    usuario: 'Alex',
-  },
-  {
-    id: 2,
-    dataHora: '2026-03-16 18:40',
-    tipo: 'VENDA',
-    categoria: 'Mesa 08',
-    descricao: 'Pedido mesa 08',
-    formaPagamento: 'DINHEIRO',
-    valor: 86,
-    usuario: 'Alex',
-  },
-  {
-    id: 3,
-    dataHora: '2026-03-16 19:05',
-    tipo: 'DESPESA',
-    categoria: 'Compra emergencial',
-    descricao: 'Compra de gelo',
-    formaPagamento: 'DINHEIRO',
-    valor: 30,
-    usuario: 'Alex',
-  },
-  {
-    id: 4,
-    dataHora: '2026-03-16 20:10',
-    tipo: 'SANGRIA',
-    categoria: 'Retirada',
-    descricao: 'Retirada parcial do caixa',
-    formaPagamento: 'DINHEIRO',
-    valor: 150,
-    usuario: 'Alex',
-  },
-]
 
 function moeda(valor) {
   return Number(valor || 0).toLocaleString('pt-BR', {
@@ -110,41 +85,104 @@ function getTipoTag(tipo) {
     SANGRIA: 'orange',
     SUPRIMENTO: 'blue',
     ENTRADA: 'cyan',
+    AJUSTE: 'purple',
   }
 
   return <Tag color={map[tipo] || 'default'}>{tipo}</Tag>
 }
 
+function getApiError(error, fallback) {
+  return error?.response?.data?.message || fallback
+}
+
 export default function CaixaPage() {
-  const [caixa, setCaixa] = useState(initialCaixa)
-  const [movimentacoes, setMovimentacoes] = useState(initialMovimentacoes)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
+
+  const [caixa, setCaixa] = useState(emptyCaixa)
+  const [movimentacoes, setMovimentacoes] = useState([])
+  const [historico, setHistorico] = useState([])
 
   const [openAbertura, setOpenAbertura] = useState(false)
   const [openFechamento, setOpenFechamento] = useState(false)
   const [openLancamento, setOpenLancamento] = useState(false)
 
+  const [filtroHistorico, setFiltroHistorico] = useState(null)
+
   const [formAbertura] = Form.useForm()
   const [formFechamento] = Form.useForm()
   const [formLancamento] = Form.useForm()
 
+  useEffect(() => {
+    loadCurrentCashRegister()
+    loadHistorico()
+  }, [])
+
   const resumoFormas = useMemo(() => {
-    const totals = {
-      DINHEIRO: 0,
-      PIX: 0,
-      DEBITO: 0,
-      CREDITO: 0,
+    return {
+      DINHEIRO: Number(caixa?.resumoFormas?.DINHEIRO || 0),
+      PIX: Number(caixa?.resumoFormas?.PIX || 0),
+      DEBITO: Number(caixa?.resumoFormas?.DEBITO || 0),
+      CREDITO: Number(caixa?.resumoFormas?.CREDITO || 0),
+      OUTRO: Number(caixa?.resumoFormas?.OUTRO || 0),
     }
+  }, [caixa])
 
-    movimentacoes.forEach((item) => {
-      if (item.tipo === 'VENDA') {
-        if (totals[item.formaPagamento] !== undefined) {
-          totals[item.formaPagamento] += Number(item.valor || 0)
-        }
+  const totalVendas = useMemo(() => Number(caixa?.totalVendas || 0), [caixa])
+  const totalDespesasSaidas = useMemo(() => Number(caixa?.saidas || 0), [caixa])
+
+  async function loadCurrentCashRegister(showLoader = true) {
+    try {
+      if (showLoader) setLoading(true)
+
+      const { data } = await http.get('/cash-register/current')
+
+      if (!data || !data.caixa) {
+        setCaixa(emptyCaixa)
+        setMovimentacoes([])
+        return
       }
-    })
 
-    return totals
-  }, [movimentacoes])
+      setCaixa({
+        ...emptyCaixa,
+        ...data.caixa,
+        resumoFormas: {
+          ...emptyCaixa.resumoFormas,
+          ...(data.caixa.resumoFormas || {}),
+        },
+      })
+
+      setMovimentacoes(Array.isArray(data.movimentacoes) ? data.movimentacoes : [])
+    } catch (error) {
+      message.error(getApiError(error, 'Erro ao carregar o caixa atual.'))
+      setCaixa(emptyCaixa)
+      setMovimentacoes([])
+    } finally {
+      if (showLoader) setLoading(false)
+    }
+  }
+
+  async function loadHistorico(periodo = filtroHistorico) {
+    try {
+      setLoadingHistorico(true)
+
+      const params = {}
+
+      if (periodo?.length === 2) {
+        params.startDate = periodo[0].startOf('day').toISOString()
+        params.endDate = periodo[1].endOf('day').toISOString()
+      }
+
+      const { data } = await http.get('/cash-register/history', { params })
+      setHistorico(Array.isArray(data) ? data : [])
+    } catch (error) {
+      message.error(getApiError(error, 'Erro ao carregar histórico do caixa.'))
+      setHistorico([])
+    } finally {
+      setLoadingHistorico(false)
+    }
+  }
 
   const columns = [
     {
@@ -165,11 +203,13 @@ export default function CaixaPage() {
       dataIndex: 'categoria',
       key: 'categoria',
       width: 180,
+      render: (value) => value || '-',
     },
     {
       title: 'Descrição',
       dataIndex: 'descricao',
       key: 'descricao',
+      render: (value) => value || '-',
     },
     {
       title: 'Pagamento',
@@ -191,111 +231,178 @@ export default function CaixaPage() {
       dataIndex: 'usuario',
       key: 'usuario',
       width: 140,
+      render: (value) => value || '-',
     },
   ]
 
-  const handleAbrirCaixa = async () => {
+  const historicoColumns = [
+    {
+      title: 'Abertura',
+      dataIndex: 'dataAbertura',
+      key: 'dataAbertura',
+      width: 170,
+      render: (value) => value || '-',
+    },
+    {
+      title: 'Fechamento',
+      dataIndex: 'dataFechamento',
+      key: 'dataFechamento',
+      width: 170,
+      render: (value) => value || '-',
+    },
+    {
+      title: 'Operador',
+      dataIndex: 'operador',
+      key: 'operador',
+      width: 180,
+      render: (value) => value || '-',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 120,
+      render: (value) => (
+        <Badge
+          status={statusColors[value] || 'default'}
+          text={<Text strong>{value}</Text>}
+        />
+      ),
+    },
+    {
+      title: 'Fundo inicial',
+      dataIndex: 'fundoInicial',
+      key: 'fundoInicial',
+      width: 140,
+      align: 'right',
+      render: (value) => moeda(value),
+    },
+    {
+      title: 'Vendas',
+      dataIndex: 'totalVendas',
+      key: 'totalVendas',
+      width: 140,
+      align: 'right',
+      render: (value) => moeda(value),
+    },
+    {
+      title: 'Saídas',
+      dataIndex: 'saidas',
+      key: 'saidas',
+      width: 140,
+      align: 'right',
+      render: (value) => moeda(value),
+    },
+    {
+      title: 'Esperado',
+      dataIndex: 'saldoEsperado',
+      key: 'saldoEsperado',
+      width: 140,
+      align: 'right',
+      render: (value) => moeda(value),
+    },
+    {
+      title: 'Informado',
+      dataIndex: 'saldoInformado',
+      key: 'saldoInformado',
+      width: 140,
+      align: 'right',
+      render: (value) => moeda(value),
+    },
+    {
+      title: 'Diferença',
+      dataIndex: 'diferenca',
+      key: 'diferenca',
+      width: 140,
+      align: 'right',
+      render: (value) => (
+        <Text
+          style={{
+            color:
+              Number(value || 0) === 0
+                ? undefined
+                : Number(value || 0) > 0
+                ? '#1677ff'
+                : '#cf1322',
+          }}
+        >
+          {moeda(value)}
+        </Text>
+      ),
+    },
+  ]
+
+  async function handleAbrirCaixa() {
     try {
       const values = await formAbertura.validateFields()
+      setSubmitting(true)
 
-      setCaixa({
-        ...caixa,
-        status: 'ABERTO',
-        operador: values.operador,
-        dataAbertura: dayjs().format('YYYY-MM-DD HH:mm'),
-        dataFechamento: null,
+      await http.post('/cash-register/open', {
         fundoInicial: Number(values.fundoInicial || 0),
-        entradas: 0,
-        saidas: 0,
-        saldoEsperado: Number(values.fundoInicial || 0),
-        saldoInformado: 0,
-        diferenca: 0,
+        observacao: values.observacao || '',
       })
 
-      setMovimentacoes([])
       setOpenAbertura(false)
       formAbertura.resetFields()
+      await loadCurrentCashRegister(false)
+      await loadHistorico()
       message.success('Caixa aberto com sucesso!')
     } catch (error) {
-      message.error('Preencha os dados da abertura.')
+      if (error?.errorFields) return
+      message.error(getApiError(error, 'Não foi possível abrir o caixa.'))
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const handleSalvarLancamento = async () => {
+  async function handleSalvarLancamento() {
     try {
       const values = await formLancamento.validateFields()
+      setSubmitting(true)
 
-      const novo = {
-        id: Date.now(),
-        dataHora: dayjs().format('YYYY-MM-DD HH:mm'),
+      await http.post('/cash-register/movement', {
         tipo: values.tipo,
+        formaPagamento: values.formaPagamento || null,
         categoria: values.categoria,
         descricao: values.descricao,
-        formaPagamento: values.formaPagamento || null,
         valor: Number(values.valor || 0),
-        usuario: caixa.operador,
-      }
-
-      const isSaida = ['DESPESA', 'SANGRIA'].includes(values.tipo)
-      const isEntrada = ['SUPRIMENTO', 'ENTRADA'].includes(values.tipo)
-
-      setMovimentacoes((prev) => [novo, ...prev])
-
-      setCaixa((prev) => {
-        const novasEntradas = isEntrada ? prev.entradas + novo.valor : prev.entradas
-        const novasSaidas = isSaida ? prev.saidas + novo.valor : prev.saidas
-        const novoSaldoEsperado =
-          prev.fundoInicial + novasEntradas + getVendasTotalApenasDinheiro(movimentacoes, novo) - novasSaidas
-
-        return {
-          ...prev,
-          entradas: novasEntradas,
-          saidas: novasSaidas,
-          saldoEsperado: novoSaldoEsperado,
-        }
       })
 
       setOpenLancamento(false)
       formLancamento.resetFields()
+      await loadCurrentCashRegister(false)
+      await loadHistorico()
       message.success('Lançamento registrado com sucesso!')
     } catch (error) {
-      message.error('Preencha os dados do lançamento.')
+      if (error?.errorFields) return
+      message.error(getApiError(error, 'Não foi possível registrar o lançamento.'))
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const handleFecharCaixa = async () => {
+  async function handleFecharCaixa() {
     try {
       const values = await formFechamento.validateFields()
-      const saldoInformado = Number(values.saldoInformado || 0)
-      const diferenca = saldoInformado - Number(caixa.saldoEsperado || 0)
+      setSubmitting(true)
 
-      setCaixa((prev) => ({
-        ...prev,
-        status: 'FECHADO',
-        dataFechamento: dayjs().format('YYYY-MM-DD HH:mm'),
-        saldoInformado,
-        diferenca,
-      }))
+      await http.post('/cash-register/close', {
+        saldoInformado: Number(values.saldoInformado || 0),
+        observacao: values.observacao || '',
+      })
 
       setOpenFechamento(false)
       formFechamento.resetFields()
+      await loadCurrentCashRegister(false)
+      await loadHistorico()
       message.success('Caixa fechado com sucesso!')
     } catch (error) {
-      message.error('Informe os dados para fechamento.')
+      if (error?.errorFields) return
+      message.error(getApiError(error, 'Não foi possível fechar o caixa.'))
+    } finally {
+      setSubmitting(false)
     }
   }
-
-  const totalVendas = useMemo(() => {
-    return movimentacoes
-      .filter((item) => item.tipo === 'VENDA')
-      .reduce((acc, item) => acc + Number(item.valor || 0), 0)
-  }, [movimentacoes])
-
-  const totalDespesasSaidas = useMemo(() => {
-    return movimentacoes
-      .filter((item) => ['DESPESA', 'SANGRIA'].includes(item.tipo))
-      .reduce((acc, item) => acc + Number(item.valor || 0), 0)
-  }, [movimentacoes])
 
   const tabs = [
     {
@@ -303,6 +410,15 @@ export default function CaixaPage() {
       label: 'Resumo',
       children: (
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          {!caixa?.id && (
+            <Alert
+              type="info"
+              showIcon
+              message="Nenhum caixa aberto no momento"
+              description="Abra o caixa para começar a registrar pagamentos, sangrias, suprimentos e demais movimentações."
+            />
+          )}
+
           <Row gutter={[16, 16]}>
             <Col xs={24} md={12} lg={6}>
               <Card bordered={false} style={{ borderRadius: 16 }}>
@@ -358,7 +474,7 @@ export default function CaixaPage() {
               <Col xs={24} md={12}>
                 <Space direction="vertical" size={4}>
                   <Text type="secondary">Operador</Text>
-                  <Text strong>{caixa.operador}</Text>
+                  <Text strong>{caixa.operador || '-'}</Text>
                 </Space>
               </Col>
 
@@ -380,27 +496,59 @@ export default function CaixaPage() {
                 <Space direction="vertical" size={4}>
                   <Text type="secondary">Status</Text>
                   <Badge
-                    status={statusColors[caixa.status]}
+                    status={statusColors[caixa.status] || 'default'}
                     text={<Text strong>{caixa.status}</Text>}
                   />
                 </Space>
               </Col>
+
+              <Col xs={24}>
+                <Space direction="vertical" size={4}>
+                  <Text type="secondary">Observação da abertura</Text>
+                  <Text>{caixa.observacaoAbertura || '-'}</Text>
+                </Space>
+              </Col>
+
+              {caixa.observacaoFechamento ? (
+                <Col xs={24}>
+                  <Space direction="vertical" size={4}>
+                    <Text type="secondary">Observação do fechamento</Text>
+                    <Text>{caixa.observacaoFechamento || '-'}</Text>
+                  </Space>
+                </Col>
+              ) : null}
             </Row>
           </Card>
 
           <Card title="Resumo por forma de pagamento" style={{ borderRadius: 16 }}>
             <Row gutter={[16, 16]}>
               <Col xs={24} md={6}>
-                <Statistic title="Dinheiro" value={resumoFormas.DINHEIRO} formatter={(v) => moeda(v)} />
+                <Statistic
+                  title="Dinheiro"
+                  value={resumoFormas.DINHEIRO}
+                  formatter={(v) => moeda(v)}
+                />
               </Col>
               <Col xs={24} md={6}>
-                <Statistic title="PIX" value={resumoFormas.PIX} formatter={(v) => moeda(v)} />
+                <Statistic
+                  title="PIX"
+                  value={resumoFormas.PIX}
+                  formatter={(v) => moeda(v)}
+                />
               </Col>
               <Col xs={24} md={6}>
-                <Statistic title="Débito" value={resumoFormas.DEBITO} formatter={(v) => moeda(v)} />
+                <Statistic
+                  title="Débito"
+                  value={resumoFormas.DEBITO}
+                  formatter={(v) => moeda(v)}
+                />
               </Col>
               <Col xs={24} md={6}>
-                <Statistic title="Crédito" value={resumoFormas.CREDITO} formatter={(v) => moeda(v)} />
+                <Statistic
+                  title="Crédito"
+                  value={resumoFormas.CREDITO}
+                  formatter={(v) => moeda(v)}
+                />
               </Col>
             </Row>
           </Card>
@@ -417,6 +565,11 @@ export default function CaixaPage() {
             columns={columns}
             dataSource={movimentacoes}
             pagination={{ pageSize: 8 }}
+            locale={{
+              emptyText: (
+                <Empty description="Nenhuma movimentação registrada neste caixa" />
+              ),
+            }}
             scroll={{ x: 1000 }}
           />
         </Card>
@@ -430,10 +583,18 @@ export default function CaixaPage() {
           <Card style={{ borderRadius: 16 }}>
             <Row gutter={[16, 16]}>
               <Col xs={24} md={8}>
-                <Statistic title="Saldo esperado" value={caixa.saldoEsperado} formatter={(v) => moeda(v)} />
+                <Statistic
+                  title="Saldo esperado"
+                  value={caixa.saldoEsperado}
+                  formatter={(v) => moeda(v)}
+                />
               </Col>
               <Col xs={24} md={8}>
-                <Statistic title="Saldo informado" value={caixa.saldoInformado} formatter={(v) => moeda(v)} />
+                <Statistic
+                  title="Saldo informado"
+                  value={caixa.saldoInformado}
+                  formatter={(v) => moeda(v)}
+                />
               </Col>
               <Col xs={24} md={8}>
                 <Statistic
@@ -473,119 +634,177 @@ export default function CaixaPage() {
       key: 'historico',
       label: 'Histórico',
       children: (
-        <Card style={{ borderRadius: 16 }}>
-          <Text type="secondary">
-            Depois a gente pode ligar essa aba no backend para listar os caixas anteriores,
-            com operador, abertura, fechamento, valor final e diferença.
-          </Text>
-        </Card>
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Card style={{ borderRadius: 16 }}>
+            <Row gutter={[16, 16]} align="middle" justify="space-between">
+              <Col xs={24} md={16}>
+                <Space wrap>
+                  <RangePicker
+                    value={filtroHistorico}
+                    format="DD/MM/YYYY"
+                    onChange={(dates) => setFiltroHistorico(dates)}
+                  />
+
+                  <Button
+                    onClick={() => loadHistorico()}
+                    loading={loadingHistorico}
+                  >
+                    Filtrar
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setFiltroHistorico(null)
+                      loadHistorico(null)
+                    }}
+                  >
+                    Limpar filtro
+                  </Button>
+                </Space>
+              </Col>
+
+              <Col xs={24} md="auto">
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => loadHistorico()}
+                  loading={loadingHistorico}
+                >
+                  Atualizar
+                </Button>
+              </Col>
+            </Row>
+          </Card>
+
+          <Card style={{ borderRadius: 16 }}>
+            <Table
+              rowKey="id"
+              columns={historicoColumns}
+              dataSource={historico}
+              loading={loadingHistorico}
+              pagination={{ pageSize: 8 }}
+              locale={{
+                emptyText: <Empty description="Nenhum caixa encontrado" />,
+              }}
+              scroll={{ x: 1300 }}
+            />
+          </Card>
+        </Space>
       ),
     },
   ]
 
   return (
     <>
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Card style={{ borderRadius: 20 }}>
-          <Row gutter={[16, 16]} align="middle" justify="space-between">
-            <Col xs={24} md={16}>
-              <Space direction="vertical" size={4}>
-                <Title level={3} style={{ margin: 0 }}>
-                  Caixa
-                </Title>
-                <Text type="secondary">
-                  Controle de abertura, fechamento, despesas, sangrias e movimentações do dia.
-                </Text>
-              </Space>
+      <Spin spinning={loading}>
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Card style={{ borderRadius: 20 }}>
+            <Row gutter={[16, 16]} align="middle" justify="space-between">
+              <Col xs={24} md={16}>
+                <Space direction="vertical" size={4}>
+                  <Title level={3} style={{ margin: 0 }}>
+                    Caixa
+                  </Title>
+                  <Text type="secondary">
+                    Controle de abertura, fechamento, despesas, sangrias e movimentações do dia.
+                  </Text>
+                </Space>
+              </Col>
+
+              <Col xs={24} md="auto">
+                <Space wrap>
+                  <Badge
+                    status={statusColors[caixa.status] || 'default'}
+                    text={<Text strong>{caixa.status}</Text>}
+                  />
+
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => loadCurrentCashRegister()}
+                  >
+                    Atualizar
+                  </Button>
+
+                  <Button
+                    icon={<CheckCircleOutlined />}
+                    type="primary"
+                    onClick={() => setOpenAbertura(true)}
+                    disabled={caixa.status === 'ABERTO'}
+                  >
+                    Abrir caixa
+                  </Button>
+
+                  <Button
+                    icon={<PlusCircleOutlined />}
+                    onClick={() => setOpenLancamento(true)}
+                    disabled={caixa.status !== 'ABERTO'}
+                  >
+                    Novo lançamento
+                  </Button>
+
+                  <Button
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={() => setOpenFechamento(true)}
+                    disabled={caixa.status !== 'ABERTO'}
+                  >
+                    Fechar caixa
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
+          </Card>
+
+          <Row gutter={[16, 16]}>
+            <Col xs={24} md={12} lg={6}>
+              <Card style={{ borderRadius: 16 }}>
+                <Statistic
+                  title="Entradas manuais"
+                  value={caixa.entradas}
+                  formatter={(v) => moeda(v)}
+                  prefix={<PlusCircleOutlined />}
+                />
+              </Card>
             </Col>
 
-            <Col xs={24} md="auto">
-              <Space wrap>
-                <Badge
-                  status={statusColors[caixa.status]}
-                  text={<Text strong>{caixa.status}</Text>}
+            <Col xs={24} md={12} lg={6}>
+              <Card style={{ borderRadius: 16 }}>
+                <Statistic
+                  title="Saídas"
+                  value={caixa.saidas}
+                  formatter={(v) => moeda(v)}
+                  prefix={<MinusCircleOutlined />}
                 />
+              </Card>
+            </Col>
 
-                <Button
-                  icon={<CheckCircleOutlined />}
-                  type="primary"
-                  onClick={() => setOpenAbertura(true)}
-                  disabled={caixa.status === 'ABERTO'}
-                >
-                  Abrir caixa
-                </Button>
+            <Col xs={24} md={12} lg={6}>
+              <Card style={{ borderRadius: 16 }}>
+                <Statistic
+                  title="Saldo esperado"
+                  value={caixa.saldoEsperado}
+                  formatter={(v) => moeda(v)}
+                  prefix={<SafetyOutlined />}
+                />
+              </Card>
+            </Col>
 
-                <Button
-                  icon={<PlusCircleOutlined />}
-                  onClick={() => setOpenLancamento(true)}
-                  disabled={caixa.status !== 'ABERTO'}
-                >
-                  Novo lançamento
-                </Button>
-
-                <Button
-                  danger
-                  icon={<CloseCircleOutlined />}
-                  onClick={() => setOpenFechamento(true)}
-                  disabled={caixa.status !== 'ABERTO'}
-                >
-                  Fechar caixa
-                </Button>
-              </Space>
+            <Col xs={24} md={12} lg={6}>
+              <Card style={{ borderRadius: 16 }}>
+                <Statistic
+                  title="Diferença"
+                  value={caixa.diferenca}
+                  formatter={(v) => moeda(v)}
+                  prefix={<ExclamationCircleOutlined />}
+                />
+              </Card>
             </Col>
           </Row>
-        </Card>
 
-        <Row gutter={[16, 16]}>
-          <Col xs={24} md={12} lg={6}>
-            <Card style={{ borderRadius: 16 }}>
-              <Statistic
-                title="Entradas manuais"
-                value={caixa.entradas}
-                formatter={(v) => moeda(v)}
-                prefix={<PlusCircleOutlined />}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} md={12} lg={6}>
-            <Card style={{ borderRadius: 16 }}>
-              <Statistic
-                title="Saídas"
-                value={caixa.saidas}
-                formatter={(v) => moeda(v)}
-                prefix={<MinusCircleOutlined />}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} md={12} lg={6}>
-            <Card style={{ borderRadius: 16 }}>
-              <Statistic
-                title="Saldo esperado"
-                value={caixa.saldoEsperado}
-                formatter={(v) => moeda(v)}
-                prefix={<SafetyOutlined />}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} md={12} lg={6}>
-            <Card style={{ borderRadius: 16 }}>
-              <Statistic
-                title="Diferença"
-                value={caixa.diferenca}
-                formatter={(v) => moeda(v)}
-                prefix={<ExclamationCircleOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        <Card style={{ borderRadius: 20 }}>
-          <Tabs items={tabs} />
-        </Card>
-      </Space>
+          <Card style={{ borderRadius: 20 }}>
+            <Tabs items={tabs} />
+          </Card>
+        </Space>
+      </Spin>
 
       <Modal
         title="Abrir caixa"
@@ -594,23 +813,23 @@ export default function CaixaPage() {
         onOk={handleAbrirCaixa}
         okText="Abrir caixa"
         cancelText="Cancelar"
+        confirmLoading={submitting}
+        destroyOnClose
       >
         <Form
           form={formAbertura}
           layout="vertical"
           initialValues={{
-            operador: 'Alex Sander',
             fundoInicial: 150,
             observacao: '',
           }}
         >
-          <Form.Item
-            name="operador"
-            label="Operador"
-            rules={[{ required: true, message: 'Informe o operador' }]}
-          >
-            <Input placeholder="Nome do operador" />
-          </Form.Item>
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="O operador será identificado automaticamente pelo usuário logado."
+          />
 
           <Form.Item
             name="fundoInicial"
@@ -638,6 +857,8 @@ export default function CaixaPage() {
         onOk={handleSalvarLancamento}
         okText="Salvar lançamento"
         cancelText="Cancelar"
+        confirmLoading={submitting}
+        destroyOnClose
       >
         <Form form={formLancamento} layout="vertical">
           <Row gutter={16}>
@@ -653,6 +874,7 @@ export default function CaixaPage() {
                     { value: 'SANGRIA', label: 'Sangria' },
                     { value: 'SUPRIMENTO', label: 'Suprimento' },
                     { value: 'ENTRADA', label: 'Entrada avulsa' },
+                    { value: 'AJUSTE', label: 'Ajuste' },
                   ]}
                 />
               </Form.Item>
@@ -662,14 +884,15 @@ export default function CaixaPage() {
               <Form.Item
                 name="formaPagamento"
                 label="Forma de pagamento"
-                rules={[{ required: true, message: 'Selecione a forma de pagamento' }]}
               >
                 <Select
+                  allowClear
                   options={[
                     { value: 'DINHEIRO', label: 'Dinheiro' },
                     { value: 'PIX', label: 'PIX' },
                     { value: 'DEBITO', label: 'Débito' },
                     { value: 'CREDITO', label: 'Crédito' },
+                    { value: 'OUTRO', label: 'Outro' },
                   ]}
                 />
               </Form.Item>
@@ -714,8 +937,17 @@ export default function CaixaPage() {
         onOk={handleFecharCaixa}
         okText="Confirmar fechamento"
         cancelText="Cancelar"
+        confirmLoading={submitting}
+        destroyOnClose
       >
-        <Form form={formFechamento} layout="vertical">
+        <Form
+          form={formFechamento}
+          layout="vertical"
+          initialValues={{
+            saldoInformado: Number(caixa.saldoEsperado || 0),
+            observacao: '',
+          }}
+        >
           <Form.Item label="Saldo esperado">
             <Input value={moeda(caixa.saldoEsperado)} disabled />
           </Form.Item>
@@ -740,16 +972,4 @@ export default function CaixaPage() {
       </Modal>
     </>
   )
-}
-
-function getVendasTotalApenasDinheiro(movimentacoes, novoLancamento) {
-  const lista = [...movimentacoes]
-
-  if (novoLancamento) {
-    lista.push(novoLancamento)
-  }
-
-  return lista
-    .filter((item) => item.tipo === 'VENDA' && item.formaPagamento === 'DINHEIRO')
-    .reduce((acc, item) => acc + Number(item.valor || 0), 0)
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Row,
   Col,
@@ -16,6 +16,8 @@ import {
   Select,
   Switch,
   Segmented,
+  Spin,
+  Alert,
 } from 'antd'
 import {
   SearchOutlined,
@@ -24,12 +26,13 @@ import {
   UndoOutlined,
   ClockCircleOutlined,
   BellOutlined,
-  SoundOutlined,
   FullscreenOutlined,
-  UserSwitchOutlined,
   FilterOutlined,
+  ReloadOutlined,
+  SoundOutlined,
 } from '@ant-design/icons'
 import PageTitle from '../../components/common/PageTitle'
+import http from '@/api/http'
 
 const { Title, Text } = Typography
 
@@ -39,177 +42,14 @@ const STATUS_PEDIDO = {
   PRONTO: 'pronto',
 }
 
-const SETOR = {
-  GERAL: 'geral',
-  CHURRASQUEIRA: 'churrasqueira',
-  BEBIDAS: 'bebidas',
-  MONTAGEM: 'montagem',
+const STORAGE_KEYS = {
+  SOM_ATIVO: 'cozinha_som_ativo',
+  MODO_TV: 'cozinha_modo_tv',
+  INTERVALO_ATUALIZACAO: 'cozinha_intervalo_atualizacao',
 }
 
-const pedidosIniciais = [
-  {
-    id: 1024,
-    origem: 'Mesa 01',
-    cliente: 'Carlos',
-    garcom: 'João',
-    horario: '19:02',
-    tempoMin: 8,
-    prioridade: 'normal',
-    status: STATUS_PEDIDO.NOVO,
-    setor: SETOR.CHURRASQUEIRA,
-    observacaoGeral: 'Mandar a bebida primeiro',
-    retiradaPor: '',
-    itens: [
-      {
-        id: 1,
-        nome: 'Espeto de Carne',
-        qtd: 2,
-        observacao: 'Um sem cebola',
-      },
-      {
-        id: 2,
-        nome: 'Pão de Alho',
-        qtd: 1,
-        observacao: '',
-      },
-    ],
-  },
-  {
-    id: 1025,
-    origem: 'Mesa 02',
-    cliente: 'Fernanda',
-    garcom: 'Marcos',
-    horario: '19:08',
-    tempoMin: 14,
-    prioridade: 'alta',
-    status: STATUS_PEDIDO.PREPARO,
-    setor: SETOR.CHURRASQUEIRA,
-    observacaoGeral: '',
-    retiradaPor: '',
-    itens: [
-      {
-        id: 1,
-        nome: 'Espeto de Frango',
-        qtd: 4,
-        observacao: '',
-      },
-      {
-        id: 2,
-        nome: 'Farofa Especial',
-        qtd: 2,
-        observacao: '',
-      },
-    ],
-  },
-  {
-    id: 1026,
-    origem: 'Mesa 03',
-    cliente: 'Juliana',
-    garcom: 'Lucas',
-    horario: '19:15',
-    tempoMin: 18,
-    prioridade: 'alta',
-    status: STATUS_PEDIDO.PRONTO,
-    setor: SETOR.MONTAGEM,
-    observacaoGeral: 'Cliente com pressa',
-    retiradaPor: '',
-    itens: [
-      {
-        id: 1,
-        nome: 'Espeto Medalhão',
-        qtd: 3,
-        observacao: '',
-      },
-      {
-        id: 2,
-        nome: 'Vinagrete',
-        qtd: 1,
-        observacao: '',
-      },
-    ],
-  },
-  {
-    id: 1027,
-    origem: 'Balcão',
-    cliente: 'Retirada',
-    garcom: 'Caixa',
-    horario: '19:18',
-    tempoMin: 5,
-    prioridade: 'normal',
-    status: STATUS_PEDIDO.NOVO,
-    setor: SETOR.GERAL,
-    observacaoGeral: 'Levar separado',
-    retiradaPor: '',
-    itens: [
-      {
-        id: 1,
-        nome: 'Linguiça Acebolada',
-        qtd: 1,
-        observacao: 'Caprichar na cebola',
-      },
-    ],
-  },
-  {
-    id: 1028,
-    origem: 'Mesa 04',
-    cliente: 'Patrícia',
-    garcom: 'João',
-    horario: '19:20',
-    tempoMin: 11,
-    prioridade: 'normal',
-    status: STATUS_PEDIDO.PREPARO,
-    setor: SETOR.BEBIDAS,
-    observacaoGeral: '',
-    retiradaPor: '',
-    itens: [
-      {
-        id: 1,
-        nome: 'Suco Natural',
-        qtd: 2,
-        observacao: 'Sem açúcar',
-      },
-      {
-        id: 2,
-        nome: 'Coca-Cola 600ml',
-        qtd: 1,
-        observacao: 'Sem gelo',
-      },
-    ],
-  },
-  {
-    id: 1029,
-    origem: 'Mesa 05',
-    cliente: 'Roberto',
-    garcom: 'Lucas',
-    horario: '19:11',
-    tempoMin: 21,
-    prioridade: 'alta',
-    status: STATUS_PEDIDO.PREPARO,
-    setor: SETOR.CHURRASQUEIRA,
-    observacaoGeral: 'Mesa VIP',
-    retiradaPor: '',
-    itens: [
-      {
-        id: 1,
-        nome: 'Espeto de Carne',
-        qtd: 5,
-        observacao: 'Dois bem passados',
-      },
-      {
-        id: 2,
-        nome: 'Linguiça Acebolada',
-        qtd: 2,
-        observacao: '',
-      },
-    ],
-  },
-]
-
 function getPriorityTag(prioridade) {
-  if (prioridade === 'alta') {
-    return { color: 'error', label: 'Alta prioridade' }
-  }
-
+  if (prioridade === 'alta') return { color: 'error', label: 'Alta prioridade' }
   return { color: 'default', label: 'Normal' }
 }
 
@@ -235,154 +75,480 @@ function getStatusLabel(status) {
 
 function getSetorLabel(setor) {
   const map = {
-    [SETOR.GERAL]: 'Geral',
-    [SETOR.CHURRASQUEIRA]: 'Churrasqueira',
-    [SETOR.BEBIDAS]: 'Bebidas',
-    [SETOR.MONTAGEM]: 'Montagem',
+    geral: 'Geral',
+    churrasqueira: 'Churrasqueira',
+    bebidas: 'Bebidas',
+    montagem: 'Montagem',
   }
-
   return map[setor] || setor
 }
 
+function readBooleanStorage(key, defaultValue = false) {
+  try {
+    const value = localStorage.getItem(key)
+    if (value === null) return defaultValue
+    return value === 'true'
+  } catch {
+    return defaultValue
+  }
+}
+
+function readNumberStorage(key, defaultValue) {
+  try {
+    const value = localStorage.getItem(key)
+    if (value === null) return defaultValue
+    const parsed = Number(value)
+    return Number.isNaN(parsed) ? defaultValue : parsed
+  } catch {
+    return defaultValue
+  }
+}
+
+function hasFlag(text, flag) {
+  return String(text || '').includes(flag)
+}
+
+function removeKitchenFlags(notes) {
+  return String(notes || '')
+    .replace(/\[KITCHEN_SENT\]/g, '')
+    .replace(/\[KITCHEN_PREPARO\]/g, '')
+    .replace(/\[KITCHEN_READY\]/g, '')
+    .replace(/\[KITCHEN_FINISHED\]/g, '')
+    .trim()
+}
+
+function getItemQtd(item) {
+  const value = Number(item?.qtd ?? item?.quantity ?? 0)
+  return Number.isNaN(value) ? 0 : value
+}
+
+function getItemNome(item) {
+  return item?.nome || item?.productName || 'Item'
+}
+
+function getItemObservacao(item) {
+  return item?.observacao ?? item?.notes ?? ''
+}
+
+function isItemAtivo(item) {
+  return String(item?.status || 'ATIVO') !== 'CANCELADO'
+}
+
+function isItemNovoCozinha(item) {
+  const notes = getItemObservacao(item)
+
+  return (
+    isItemAtivo(item) &&
+    hasFlag(notes, '[KITCHEN_SENT]') &&
+    !hasFlag(notes, '[KITCHEN_PREPARO]') &&
+    !hasFlag(notes, '[KITCHEN_READY]') &&
+    !hasFlag(notes, '[KITCHEN_FINISHED]')
+  )
+}
+
+function isItemEmPreparo(item) {
+  const notes = getItemObservacao(item)
+
+  return (
+    isItemAtivo(item) &&
+    hasFlag(notes, '[KITCHEN_PREPARO]') &&
+    !hasFlag(notes, '[KITCHEN_READY]') &&
+    !hasFlag(notes, '[KITCHEN_FINISHED]')
+  )
+}
+
+function isItemPronto(item) {
+  const notes = getItemObservacao(item)
+
+  return (
+    isItemAtivo(item) &&
+    hasFlag(notes, '[KITCHEN_READY]') &&
+    !hasFlag(notes, '[KITCHEN_FINISHED]')
+  )
+}
+
+function getItensNovosCozinha(pedido) {
+  return (pedido?.itens || []).filter(isItemNovoCozinha)
+}
+
+function getItensPreparoCozinha(pedido) {
+  return (pedido?.itens || []).filter(isItemEmPreparo)
+}
+
+function getItensProntosCozinha(pedido) {
+  return (pedido?.itens || []).filter(isItemPronto)
+}
+
+function getStatusPedidoByItens(pedido) {
+  const itensNovos = getItensNovosCozinha(pedido)
+  const itensPreparo = getItensPreparoCozinha(pedido)
+  const itensProntos = getItensProntosCozinha(pedido)
+
+  if (itensNovos.length > 0) return STATUS_PEDIDO.NOVO
+  if (itensPreparo.length > 0) return STATUS_PEDIDO.PREPARO
+  if (itensProntos.length > 0) return STATUS_PEDIDO.PRONTO
+
+  return pedido?.status || STATUS_PEDIDO.NOVO
+}
+
+function normalizePedidoKitchen(pedido) {
+  return {
+    ...pedido,
+    status: getStatusPedidoByItens({
+      ...pedido,
+      itens: (pedido?.itens || []).map((item) => ({
+        ...item,
+        qtd: getItemQtd(item),
+        nome: getItemNome(item),
+        observacao: getItemObservacao(item),
+      })),
+    }),
+    itens: (pedido?.itens || []).map((item) => ({
+      ...item,
+      qtd: getItemQtd(item),
+      nome: getItemNome(item),
+      observacao: getItemObservacao(item),
+    })),
+  }
+}
+
+function buildPedidosSnapshot(listaPedidos) {
+  const snapshot = new Map()
+
+  for (const pedido of listaPedidos) {
+    const itensNovos = getItensNovosCozinha(pedido)
+
+    const hashNovos = itensNovos
+      .map((item) => `${item.id}:${getItemQtd(item)}:${getItemObservacao(item)}`)
+      .sort()
+      .join('|')
+
+    const totalNovos = itensNovos.reduce((acc, item) => acc + getItemQtd(item), 0)
+
+    snapshot.set(String(pedido.id), {
+      id: String(pedido.id),
+      hashNovos,
+      totalNovos,
+    })
+  }
+
+  return snapshot
+}
+
 export default function Cozinha() {
-  const [pedidos, setPedidos] = useState(pedidosIniciais)
+  const [pedidos, setPedidos] = useState([])
+  const [resumo, setResumo] = useState({})
+  const [loading, setLoading] = useState(false)
+
   const [busca, setBusca] = useState('')
   const [filtroPrioridade, setFiltroPrioridade] = useState('todas')
   const [filtroSetor, setFiltroSetor] = useState('todos')
-  const [somAtivo, setSomAtivo] = useState(true)
-  const [modoTV, setModoTV] = useState(false)
+  const [somAtivo, setSomAtivo] = useState(() =>
+    readBooleanStorage(STORAGE_KEYS.SOM_ATIVO, true),
+  )
+  const [modoTV, setModoTV] = useState(() =>
+    readBooleanStorage(STORAGE_KEYS.MODO_TV, false),
+  )
   const [mostrarApenasAtrasados, setMostrarApenasAtrasados] = useState(false)
+  const [ordenacaoTempo, setOrdenacaoTempo] = useState('desc')
+  const [intervaloAtualizacao, setIntervaloAtualizacao] = useState(() =>
+    readNumberStorage(STORAGE_KEYS.INTERVALO_ATUALIZACAO, 15000),
+  )
 
-  const pedidosFiltrados = useMemo(() => {
-    return pedidos.filter((pedido) => {
-      const texto = busca.toLowerCase()
+  const pedidosSnapshotRef = useRef(new Map())
+  const primeiraCargaRef = useRef(true)
+  const audioRef = useRef(null)
+  const audioContextRef = useRef(null)
 
-      const matchBusca =
-        String(pedido.id).includes(texto) ||
-        pedido.origem.toLowerCase().includes(texto) ||
-        pedido.cliente.toLowerCase().includes(texto) ||
-        pedido.garcom.toLowerCase().includes(texto) ||
-        pedido.setor.toLowerCase().includes(texto) ||
-        pedido.itens.some((item) => item.nome.toLowerCase().includes(texto))
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SOM_ATIVO, String(somAtivo))
+    } catch {}
+  }, [somAtivo])
 
-      const matchPrioridade =
-        filtroPrioridade === 'todas'
-          ? true
-          : pedido.prioridade === filtroPrioridade
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.MODO_TV, String(modoTV))
+    } catch {}
+  }, [modoTV])
 
-      const matchSetor =
-        filtroSetor === 'todos' ? true : pedido.setor === filtroSetor
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.INTERVALO_ATUALIZACAO,
+        String(intervaloAtualizacao),
+      )
+    } catch {}
+  }, [intervaloAtualizacao])
 
-      const matchAtrasado = mostrarApenasAtrasados ? pedido.tempoMin >= 15 : true
+  const tocarBeepFallback = useCallback(async () => {
+    try {
+      if (!audioContextRef.current) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext
+        if (!AudioContextClass) return false
+        audioContextRef.current = new AudioContextClass()
+      }
 
-      return matchBusca && matchPrioridade && matchSetor && matchAtrasado
+      const ctx = audioContextRef.current
+
+      if (ctx.state === 'suspended') {
+        await ctx.resume()
+      }
+
+      const oscillator = ctx.createOscillator()
+      const gainNode = ctx.createGain()
+
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime)
+
+      gainNode.gain.setValueAtTime(0.0001, ctx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01)
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35)
+
+      oscillator.connect(gainNode)
+      gainNode.connect(ctx.destination)
+
+      oscillator.start(ctx.currentTime)
+      oscillator.stop(ctx.currentTime + 0.35)
+
+      return true
+    } catch (error) {
+      console.error('Erro ao tocar beep fallback:', error)
+      return false
+    }
+  }, [])
+
+  const tocarSomNovoItem = useCallback(async () => {
+    if (!somAtivo) return false
+
+    try {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0
+        await audioRef.current.play()
+        return true
+      }
+
+      return await tocarBeepFallback()
+    } catch (error) {
+      console.warn('Falha ao tocar áudio principal. Usando fallback.', error)
+      return await tocarBeepFallback()
+    }
+  }, [somAtivo, tocarBeepFallback])
+
+  const testarSom = useCallback(async () => {
+    const tocou = await tocarSomNovoItem()
+
+    if (tocou) {
+      message.success('Som testado com sucesso')
+    } else {
+      message.warning(
+        'Não foi possível tocar o som agora. Em alguns navegadores, é preciso interagir com a página antes.',
+      )
+    }
+  }, [tocarSomNovoItem])
+
+  const carregarDados = useCallback(async () => {
+    try {
+      setLoading(true)
+
+      const [pedidosRes, resumoRes] = await Promise.all([
+        http.get('/kitchen', {
+          params: {
+            busca,
+            prioridade: filtroPrioridade,
+            setor: filtroSetor,
+            atrasados: mostrarApenasAtrasados,
+          },
+        }),
+        http.get('/kitchen/summary'),
+      ])
+
+      const listaPedidosBruta = pedidosRes.data || []
+      const listaPedidos = listaPedidosBruta.map(normalizePedidoKitchen)
+
+      setPedidos(listaPedidos)
+      setResumo(resumoRes.data || {})
+
+      const snapshotAnterior = pedidosSnapshotRef.current
+      const snapshotAtual = buildPedidosSnapshot(listaPedidos)
+
+      if (!primeiraCargaRef.current && somAtivo) {
+        const pedidosComNovidade = []
+
+        for (const pedido of listaPedidos) {
+          const id = String(pedido.id)
+          const anterior = snapshotAnterior.get(id)
+          const atual = snapshotAtual.get(id)
+
+          const hashAnterior = anterior?.hashNovos || ''
+          const hashAtual = atual?.hashNovos || ''
+          const totalAtual = atual?.totalNovos || 0
+
+          if (hashAtual !== hashAnterior && totalAtual > 0) {
+            pedidosComNovidade.push(pedido)
+          }
+        }
+
+        if (pedidosComNovidade.length > 0) {
+          await tocarSomNovoItem()
+
+          if (pedidosComNovidade.length === 1) {
+            message.info(
+              `Novidade na cozinha no pedido #${String(pedidosComNovidade[0].id).slice(-6)}.`,
+            )
+          } else {
+            message.info(
+              `${pedidosComNovidade.length} pedidos com novidades na cozinha.`,
+            )
+          }
+        }
+      }
+
+      pedidosSnapshotRef.current = snapshotAtual
+
+      if (primeiraCargaRef.current) {
+        primeiraCargaRef.current = false
+      }
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Erro ao carregar cozinha')
+    } finally {
+      setLoading(false)
+    }
+  }, [
+    busca,
+    filtroPrioridade,
+    filtroSetor,
+    mostrarApenasAtrasados,
+    somAtivo,
+    tocarSomNovoItem,
+  ])
+
+  useEffect(() => {
+    const audio = new Audio('/sounds/novo-pedido.mp3')
+    audio.preload = 'auto'
+    audioRef.current = audio
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+
+      if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    carregarDados()
+  }, [carregarDados])
+
+  useEffect(() => {
+    if (!intervaloAtualizacao) return
+
+    const interval = setInterval(() => {
+      carregarDados()
+    }, intervaloAtualizacao)
+
+    return () => clearInterval(interval)
+  }, [carregarDados, intervaloAtualizacao])
+
+  const iniciarPreparo = async (id) => {
+    try {
+      await http.patch(`/kitchen/${id}/start`)
+      message.success('Pedido em preparo')
+      carregarDados()
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao iniciar preparo')
+    }
+  }
+
+  const marcarPronto = async (id) => {
+    try {
+      await http.patch(`/kitchen/${id}/ready`)
+      message.success('Pedido pronto')
+      carregarDados()
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao marcar como pronto')
+    }
+  }
+
+  const voltarEtapa = async (id) => {
+    try {
+      await http.patch(`/kitchen/${id}/back`)
+      message.success('Etapa atualizada')
+      carregarDados()
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao voltar etapa')
+    }
+  }
+
+  const finalizarPedido = async (id) => {
+    try {
+      const res = await http.patch(`/kitchen/${id}/finish`)
+      message.success(res.data?.message || 'Pedido finalizado')
+      carregarDados()
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao finalizar pedido')
+    }
+  }
+
+  const chamarGarcom = async (id) => {
+    try {
+      const res = await http.post(`/kitchen/${id}/call-waiter`)
+      message.info(res.data?.message || 'Garçom chamado')
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao chamar garçom')
+    }
+  }
+
+  const pedidosOrdenados = useMemo(() => {
+    const sorted = [...pedidos].sort((a, b) => {
+      return ordenacaoTempo === 'desc'
+        ? Number(b.tempoMin || 0) - Number(a.tempoMin || 0)
+        : Number(a.tempoMin || 0) - Number(b.tempoMin || 0)
     })
-  }, [pedidos, busca, filtroPrioridade, filtroSetor, mostrarApenasAtrasados])
+
+    return sorted
+  }, [pedidos, ordenacaoTempo])
 
   const pedidosNovos = useMemo(
-    () => pedidosFiltrados.filter((item) => item.status === STATUS_PEDIDO.NOVO),
-    [pedidosFiltrados]
+    () => pedidosOrdenados.filter((p) => getStatusPedidoByItens(p) === STATUS_PEDIDO.NOVO),
+    [pedidosOrdenados],
   )
 
   const pedidosPreparo = useMemo(
-    () => pedidosFiltrados.filter((item) => item.status === STATUS_PEDIDO.PREPARO),
-    [pedidosFiltrados]
+    () => pedidosOrdenados.filter((p) => getStatusPedidoByItens(p) === STATUS_PEDIDO.PREPARO),
+    [pedidosOrdenados],
   )
 
   const pedidosProntos = useMemo(
-    () => pedidosFiltrados.filter((item) => item.status === STATUS_PEDIDO.PRONTO),
-    [pedidosFiltrados]
+    () => pedidosOrdenados.filter((p) => getStatusPedidoByItens(p) === STATUS_PEDIDO.PRONTO),
+    [pedidosOrdenados],
   )
-
-  const resumo = useMemo(() => {
-    return {
-      total: pedidos.length,
-      novos: pedidos.filter((item) => item.status === STATUS_PEDIDO.NOVO).length,
-      preparo: pedidos.filter((item) => item.status === STATUS_PEDIDO.PREPARO).length,
-      prontos: pedidos.filter((item) => item.status === STATUS_PEDIDO.PRONTO).length,
-      atrasados: pedidos.filter((item) => item.tempoMin >= 15).length,
-      churrasqueira: pedidos.filter((item) => item.setor === SETOR.CHURRASQUEIRA).length,
-      bebidas: pedidos.filter((item) => item.setor === SETOR.BEBIDAS).length,
-      montagem: pedidos.filter((item) => item.setor === SETOR.MONTAGEM).length,
-    }
-  }, [pedidos])
-
-  const atualizarStatus = (pedidoId, novoStatus) => {
-    setPedidos((prev) =>
-      prev.map((item) =>
-        item.id === pedidoId
-          ? {
-              ...item,
-              status: novoStatus,
-            }
-          : item
-      )
-    )
-  }
-
-  const iniciarPreparo = (pedidoId) => {
-    atualizarStatus(pedidoId, STATUS_PEDIDO.PREPARO)
-    message.success('Pedido movido para preparo')
-  }
-
-  const marcarPronto = (pedidoId) => {
-    atualizarStatus(pedidoId, STATUS_PEDIDO.PRONTO)
-    message.success('Pedido marcado como pronto')
-  }
-
-  const voltarEtapa = (pedido) => {
-    if (pedido.status === STATUS_PEDIDO.PRONTO) {
-      atualizarStatus(pedido.id, STATUS_PEDIDO.PREPARO)
-      message.success('Pedido voltou para preparo')
-      return
-    }
-
-    if (pedido.status === STATUS_PEDIDO.PREPARO) {
-      atualizarStatus(pedido.id, STATUS_PEDIDO.NOVO)
-      message.success('Pedido voltou para novos')
-      return
-    }
-
-    message.info('Esse pedido já está na primeira etapa')
-  }
-
-  const finalizarPedido = (pedidoId) => {
-    setPedidos((prev) => prev.filter((item) => item.id !== pedidoId))
-    message.success('Pedido retirado da tela da cozinha')
-  }
-
-  const chamarGarcom = (pedido) => {
-    message.info(`Garçom ${pedido.garcom} chamado para o pedido #${pedido.id}`)
-  }
-
-  const tocarAlerta = () => {
-    message.info(somAtivo ? 'Alerta sonoro simulado' : 'O som está desativado')
-  }
-
-  const alternarModoTV = (checked) => {
-    setModoTV(checked)
-    message.success(checked ? 'Modo TV ativado' : 'Modo TV desativado')
-  }
 
   const renderPedidoCard = (pedido) => {
     const prioridade = getPriorityTag(pedido.prioridade)
-    const tempoCor = getTempoCor(pedido.tempoMin)
-    const atrasado = pedido.tempoMin >= 15
+    const tempoCor = getTempoCor(Number(pedido.tempoMin || 0))
+    const temNovidadeCozinha = getItensNovosCozinha(pedido).length > 0
 
     return (
       <Card
         key={pedido.id}
-        bordered={false}
         style={{
           background: '#171717',
-          border: atrasado ? '1px solid #ff4d4f' : '1px solid #262626',
-          boxShadow: atrasado ? '0 0 0 1px rgba(255,77,79,0.12)' : 'none',
+          border: temNovidadeCozinha
+            ? '2px solid #faad14'
+            : pedido.prioridade === 'alta'
+              ? '1px solid #ff4d4f'
+              : '1px solid #262626',
+          marginBottom: 16,
+          boxShadow: temNovidadeCozinha
+            ? '0 0 0 2px rgba(250, 173, 20, 0.12), 0 0 18px rgba(250, 173, 20, 0.18)'
+            : 'none',
         }}
-        styles={{
-          body: {
-            padding: modoTV ? 20 : 16,
-          },
-        }}
+        bodyStyle={{ padding: modoTV ? 22 : 16 }}
       >
         <div
           style={{
@@ -390,220 +556,133 @@ export default function Cozinha() {
             justifyContent: 'space-between',
             gap: 12,
             alignItems: 'flex-start',
-            marginBottom: 12,
+            marginBottom: 10,
           }}
         >
           <div>
-            <Title
-              level={modoTV ? 3 : 4}
-              style={{ color: '#fff', margin: 0, lineHeight: 1.1 }}
-            >
-              #{pedido.id}
+            <Title level={modoTV ? 3 : 4} style={{ color: '#fff', margin: 0 }}>
+              #{String(pedido.id).slice(-6)}
             </Title>
-            <Text style={{ color: '#bfbfbf', fontSize: modoTV ? 15 : 14 }}>
-              {pedido.origem}
-            </Text>
+            <Text style={{ color: '#8c8c8c' }}>{pedido.code}</Text>
           </div>
 
-          <Space direction="vertical" size={6} align="end">
-            <Tag color={prioridade.color} style={{ marginRight: 0 }}>
-              {prioridade.label}
-            </Tag>
-
-            <Tag color="blue" style={{ marginRight: 0 }}>
-              {getSetorLabel(pedido.setor)}
-            </Tag>
-
-            <Badge
-              status={getStatusColor(pedido.status)}
-              text={
-                <span style={{ color: '#d9d9d9' }}>
-                  {getStatusLabel(pedido.status)}
-                </span>
-              }
-            />
+          <Space direction="vertical" align="end" size={6}>
+            <Tag color={prioridade.color}>{prioridade.label}</Tag>
+            <Tag color="blue">{getSetorLabel(pedido.setor)}</Tag>
+            {temNovidadeCozinha && <Tag color="gold">Novidade</Tag>}
           </Space>
         </div>
 
-        <Space direction="vertical" size={6} style={{ width: '100%' }}>
-          <Text style={{ color: '#d9d9d9', fontSize: modoTV ? 15 : 14 }}>
-            <strong>Cliente:</strong> {pedido.cliente}
-          </Text>
-
-          <Text style={{ color: '#d9d9d9', fontSize: modoTV ? 15 : 14 }}>
-            <strong>Garçom:</strong> {pedido.garcom}
-          </Text>
-
-          <Text style={{ color: '#d9d9d9', fontSize: modoTV ? 15 : 14 }}>
-            <strong>Horário:</strong> {pedido.horario}
-          </Text>
-
-          <Space size={6}>
-            <ClockCircleOutlined style={{ color: tempoCor }} />
-            <Text
-              style={{
-                color: tempoCor,
-                fontWeight: 700,
-                fontSize: modoTV ? 16 : 14,
-              }}
-            >
-              {pedido.tempoMin} min
-            </Text>
-            {atrasado && <Tag color="error">Atrasado</Tag>}
-          </Space>
+        <Space size={8} style={{ marginBottom: 10 }}>
+          <Badge
+            status={getStatusColor(getStatusPedidoByItens(pedido))}
+            text={
+              <span style={{ color: '#d9d9d9' }}>
+                {getStatusLabel(getStatusPedidoByItens(pedido))}
+              </span>
+            }
+          />
         </Space>
 
-        {!!pedido.observacaoGeral && (
-          <>
-            <Divider style={{ borderColor: '#262626', margin: '12px 0' }} />
-            <Text style={{ color: '#faad14', fontSize: modoTV ? 15 : 14 }}>
-              <strong>Obs. geral:</strong> {pedido.observacaoGeral}
-            </Text>
-          </>
-        )}
+        <Divider style={{ borderColor: '#262626', margin: '10px 0' }} />
+
+        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          <Text style={{ color: '#fff' }}>
+            <strong>Cliente:</strong> {pedido.cliente}
+          </Text>
+          <Text style={{ color: '#fff' }}>
+            <strong>Mesa:</strong> {pedido.mesa}
+          </Text>
+          <Text style={{ color: '#fff' }}>
+            <strong>Origem:</strong> {pedido.origem}
+          </Text>
+          <Text style={{ color: tempoCor, fontWeight: 700 }}>
+            <ClockCircleOutlined /> {pedido.tempoMin} min
+          </Text>
+        </Space>
 
         <Divider style={{ borderColor: '#262626', margin: '12px 0' }} />
 
-        <Space direction="vertical" size={10} style={{ width: '100%' }}>
-          {pedido.itens.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                padding: modoTV ? 12 : 10,
-                background: '#111111',
-                borderRadius: 10,
-                border: '1px solid #262626',
-              }}
-            >
+        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          {pedido.itens.filter(isItemAtivo).map((item) => {
+            const itemNovo = isItemNovoCozinha(item)
+
+            return (
               <div
+                key={item.id}
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 12,
+                  padding: '6px 8px',
+                  borderRadius: 8,
+                  background: itemNovo ? 'rgba(250, 173, 20, 0.10)' : 'transparent',
+                  border: itemNovo
+                    ? '1px solid rgba(250, 173, 20, 0.35)'
+                    : '1px solid transparent',
                 }}
               >
-                <Text style={{ color: '#fff', fontWeight: 600, fontSize: modoTV ? 16 : 14 }}>
-                  {item.qtd}x {item.nome}
-                </Text>
-              </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: modoTV ? 16 : 14 }}>
+                    {item.qtd}x {item.nome}
+                  </Text>
 
-              {!!item.observacao && (
-                <Text style={{ color: '#8c8c8c', fontSize: modoTV ? 13 : 12 }}>
-                  Obs.: {item.observacao}
-                </Text>
-              )}
-            </div>
-          ))}
+                  {itemNovo && <Tag color="gold">Novo</Tag>}
+                </div>
+
+                {!!removeKitchenFlags(item.observacao) && (
+                  <div>
+                    <Text style={{ color: '#8c8c8c', fontSize: 12 }}>
+                      Obs.: {removeKitchenFlags(item.observacao)}
+                    </Text>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </Space>
 
-        <Divider style={{ borderColor: '#262626', margin: '16px 0 12px' }} />
+        <Divider style={{ borderColor: '#262626', margin: '12px 0' }} />
 
         <Space direction="vertical" style={{ width: '100%' }} size={8}>
-          {pedido.status === STATUS_PEDIDO.NOVO && (
+          {getStatusPedidoByItens(pedido) === STATUS_PEDIDO.NOVO && (
             <Button
               type="primary"
-              block
               icon={<FireOutlined />}
               onClick={() => iniciarPreparo(pedido.id)}
+              block
             >
               Iniciar preparo
             </Button>
           )}
 
-          {pedido.status === STATUS_PEDIDO.PREPARO && (
+          {getStatusPedidoByItens(pedido) === STATUS_PEDIDO.PREPARO && (
             <Button
               type="primary"
-              block
               icon={<CheckCircleOutlined />}
               onClick={() => marcarPronto(pedido.id)}
+              block
             >
               Marcar como pronto
             </Button>
           )}
 
-          {pedido.status === STATUS_PEDIDO.PRONTO && (
-            <>
-              <Button
-                type="primary"
-                block
-                icon={<UserSwitchOutlined />}
-                onClick={() => chamarGarcom(pedido)}
-              >
-                Chamar garçom
-              </Button>
-
-              <Button
-                block
-                icon={<CheckCircleOutlined />}
-                onClick={() => finalizarPedido(pedido.id)}
-              >
-                Retirar da tela
-              </Button>
-            </>
-          )}
-
-          {pedido.status !== STATUS_PEDIDO.PRONTO && (
-            <Button
-              block
-              icon={<UserSwitchOutlined />}
-              onClick={() => chamarGarcom(pedido)}
-            >
-              Chamar garçom
-            </Button>
-          )}
-
-          <Button block icon={<UndoOutlined />} onClick={() => voltarEtapa(pedido)}>
+          <Button icon={<UndoOutlined />} onClick={() => voltarEtapa(pedido.id)} block>
             Voltar etapa
           </Button>
-        </Space>
-      </Card>
-    )
-  }
 
-  const renderColuna = (titulo, pedidosColuna, corTopo) => {
-    const tagColor =
-      corTopo === '#1677ff' ? 'processing' : corTopo === '#faad14' ? 'warning' : 'success'
+          <Button icon={<BellOutlined />} onClick={() => chamarGarcom(pedido.id)} block>
+            Chamar garçom
+          </Button>
 
-    return (
-      <Card
-        bordered={false}
-        style={{ height: '100%' }}
-        styles={{
-          body: {
-            padding: modoTV ? 18 : 14,
-          },
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 14,
-            paddingBottom: 10,
-            borderBottom: `2px solid ${corTopo}`,
-          }}
-        >
-          <Title level={modoTV ? 3 : 4} style={{ color: '#fff', margin: 0 }}>
-            {titulo}
-          </Title>
-
-          <Tag color={tagColor}>{pedidosColuna.length}</Tag>
-        </div>
-
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          {pedidosColuna.length ? (
-            pedidosColuna.map((pedido) => renderPedidoCard(pedido))
-          ) : (
-            <Card
-              bordered={false}
-              style={{
-                background: '#141414',
-                border: '1px dashed #303030',
-              }}
-            >
-              <Empty description="Nenhum pedido aqui" />
-            </Card>
+          {getStatusPedidoByItens(pedido) === STATUS_PEDIDO.PRONTO && (
+            <Button danger onClick={() => finalizarPedido(pedido.id)} block>
+              Finalizar na cozinha
+            </Button>
           )}
         </Space>
       </Card>
@@ -614,168 +693,222 @@ export default function Cozinha() {
     <>
       <PageTitle
         title="Cozinha"
-        subtitle="Painel operacional de pedidos em preparo da espetaria"
+        subtitle="Painel de produção, preparo e liberação dos pedidos"
       />
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 4 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic title="Pedidos na cozinha" value={resumo.total} />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic title="Novos pedidos" value={resumo.novos} />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic title="Em preparo" value={resumo.preparo} />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic title="Atrasados" value={resumo.atrasados} />
-          </Card>
-        </Col>
-      </Row>
-
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} md={8} xl={6}>
+        <Col xs={24} sm={12} lg={6}>
           <Card bordered={false}>
-            <Statistic title="Churrasqueira" value={resumo.churrasqueira} />
+            <Statistic title="Total" value={resumo.total || 0} />
           </Card>
         </Col>
-
-        <Col xs={24} md={8} xl={6}>
+        <Col xs={24} sm={12} lg={6}>
           <Card bordered={false}>
-            <Statistic title="Bebidas" value={resumo.bebidas} />
+            <Statistic title="Novos" value={pedidosNovos.length} />
           </Card>
         </Col>
-
-        <Col xs={24} md={8} xl={6}>
+        <Col xs={24} sm={12} lg={6}>
           <Card bordered={false}>
-            <Statistic title="Montagem" value={resumo.montagem} />
+            <Statistic title="Preparo" value={pedidosPreparo.length} />
           </Card>
         </Col>
-
-        <Col xs={24} md={24} xl={6}>
+        <Col xs={24} sm={12} lg={6}>
           <Card bordered={false}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Text style={{ color: '#bfbfbf' }}>Modo TV</Text>
-                <Switch checked={modoTV} onChange={alternarModoTV} />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Text style={{ color: '#bfbfbf' }}>Som ativo</Text>
-                <Switch checked={somAtivo} onChange={setSomAtivo} />
-              </div>
-            </Space>
+            <Statistic title="Prontos" value={pedidosProntos.length} />
           </Card>
         </Col>
       </Row>
 
       <Card bordered={false} style={{ marginBottom: 16 }}>
-        <Row gutter={[12, 12]}>
-          <Col xs={24} md={10} xl={8}>
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={8}>
             <Input
-              allowClear
-              size="large"
-              placeholder="Buscar por pedido, mesa, cliente, garçom ou item"
+              placeholder="Buscar por mesa, cliente, comanda ou item"
               prefix={<SearchOutlined />}
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
           </Col>
 
-          <Col xs={24} md={7} xl={5}>
+          <Col xs={24} md={4}>
             <Select
-              size="large"
-              style={{ width: '100%' }}
               value={filtroPrioridade}
               onChange={setFiltroPrioridade}
+              style={{ width: '100%' }}
               options={[
-                { label: 'Todas as prioridades', value: 'todas' },
-                { label: 'Alta prioridade', value: 'alta' },
+                { label: 'Todas prioridades', value: 'todas' },
+                { label: 'Alta', value: 'alta' },
                 { label: 'Normal', value: 'normal' },
               ]}
             />
           </Col>
 
-          <Col xs={24} md={7} xl={5}>
+          <Col xs={24} md={4}>
             <Select
-              size="large"
-              style={{ width: '100%' }}
               value={filtroSetor}
               onChange={setFiltroSetor}
+              style={{ width: '100%' }}
               options={[
-                { label: 'Todos os setores', value: 'todos' },
-                { label: 'Churrasqueira', value: SETOR.CHURRASQUEIRA },
-                { label: 'Bebidas', value: SETOR.BEBIDAS },
-                { label: 'Montagem', value: SETOR.MONTAGEM },
-                { label: 'Geral', value: SETOR.GERAL },
+                { label: 'Todos setores', value: 'todos' },
+                { label: 'Geral', value: 'geral' },
+                { label: 'Churrasqueira', value: 'churrasqueira' },
+                { label: 'Bebidas', value: 'bebidas' },
+                { label: 'Montagem', value: 'montagem' },
               ]}
             />
           </Col>
 
-          <Col xs={24} xl={6}>
-            <Space wrap style={{ width: '100%', justifyContent: 'space-between' }}>
-              <Button icon={<BellOutlined />} onClick={tocarAlerta}>
-                Testar alerta
+          <Col xs={24} md={4}>
+            <Segmented
+              block
+              value={ordenacaoTempo}
+              onChange={setOrdenacaoTempo}
+              options={[
+                { label: 'Mais tempo', value: 'desc' },
+                { label: 'Menos tempo', value: 'asc' },
+              ]}
+            />
+          </Col>
+
+          <Col xs={24} md={4}>
+            <Space wrap>
+              <Button icon={<ReloadOutlined />} onClick={carregarDados}>
+                Atualizar
               </Button>
 
-              <Button icon={<FullscreenOutlined />} onClick={() => alternarModoTV(!modoTV)}>
-                {modoTV ? 'Sair do TV' : 'Modo TV'}
+              <Button icon={<SoundOutlined />} onClick={testarSom}>
+                Testar som
               </Button>
             </Space>
           </Col>
+
+          <Col xs={24} md={6}>
+            <Select
+              value={intervaloAtualizacao}
+              onChange={setIntervaloAtualizacao}
+              style={{ width: '100%' }}
+              options={[
+                { label: 'Tempo real (15s)', value: 15000 },
+                { label: '30 segundos', value: 30000 },
+                { label: '1 minuto', value: 60000 },
+                { label: 'Manual', value: 0 },
+              ]}
+            />
+          </Col>
+
+          <Col xs={24}>
+            <Divider style={{ margin: '8px 0 0', borderColor: '#262626' }} />
+          </Col>
+
+          <Col xs={24} md={8}>
+            <Space>
+              <FilterOutlined />
+              <Text style={{ color: '#d9d9d9' }}>Som</Text>
+              <Switch checked={somAtivo} onChange={setSomAtivo} />
+            </Space>
+          </Col>
+
+          <Col xs={24} md={8}>
+            <Space>
+              <FullscreenOutlined />
+              <Text style={{ color: '#d9d9d9' }}>Modo TV</Text>
+              <Switch checked={modoTV} onChange={setModoTV} />
+            </Space>
+          </Col>
+
+          <Col xs={24} md={8}>
+            <Space>
+              <ClockCircleOutlined />
+              <Text style={{ color: '#d9d9d9' }}>Só atrasados</Text>
+              <Switch
+                checked={mostrarApenasAtrasados}
+                onChange={setMostrarApenasAtrasados}
+              />
+            </Space>
+          </Col>
         </Row>
-
-        <Divider style={{ borderColor: '#262626' }} />
-
-        <Space wrap>
-          <Segmented
-            options={[
-              {
-                label: (
-                  <span>
-                    <FilterOutlined /> Todos
-                  </span>
-                ),
-                value: 'todos',
-              },
-              {
-                label: 'Atrasados',
-                value: 'atrasados',
-              },
-            ]}
-            value={mostrarApenasAtrasados ? 'atrasados' : 'todos'}
-            onChange={(value) => setMostrarApenasAtrasados(value === 'atrasados')}
-          />
-
-          <Tag color="red">15+ min = atrasado</Tag>
-          <Tag color="orange">10 a 14 min = atenção</Tag>
-          <Tag color="green">0 a 9 min = dentro do prazo</Tag>
-        </Space>
       </Card>
 
-      <Row gutter={[16, 16]} align="stretch">
-        <Col xs={24} xl={8}>
-          {renderColuna('Novos pedidos', pedidosNovos, '#1677ff')}
-        </Col>
+      <Alert
+        showIcon
+        type="info"
+        style={{ marginBottom: 16 }}
+        message="Pedidos com novos itens enviados para a cozinha voltam automaticamente para a coluna de Novos, tocam alerta sonoro e ficam destacados."
+      />
 
-        <Col xs={24} xl={8}>
-          {renderColuna('Em preparo', pedidosPreparo, '#faad14')}
-        </Col>
+      {loading ? (
+        <Card bordered={false}>
+          <div
+            style={{
+              minHeight: 280,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Spin size="large" />
+          </div>
+        </Card>
+      ) : (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} xl={8}>
+            <Card
+              bordered={false}
+              title={
+                <Space>
+                  <Badge status="processing" />
+                  <span>Novos</span>
+                  <Tag>{pedidosNovos.length}</Tag>
+                </Space>
+              }
+            >
+              {pedidosNovos.length ? (
+                pedidosNovos.map(renderPedidoCard)
+              ) : (
+                <Empty description="Nenhum pedido novo" />
+              )}
+            </Card>
+          </Col>
 
-        <Col xs={24} xl={8}>
-          {renderColuna('Prontos', pedidosProntos, '#52c41a')}
-        </Col>
-      </Row>
+          <Col xs={24} xl={8}>
+            <Card
+              bordered={false}
+              title={
+                <Space>
+                  <Badge status="warning" />
+                  <span>Preparo</span>
+                  <Tag>{pedidosPreparo.length}</Tag>
+                </Space>
+              }
+            >
+              {pedidosPreparo.length ? (
+                pedidosPreparo.map(renderPedidoCard)
+              ) : (
+                <Empty description="Nenhum pedido em preparo" />
+              )}
+            </Card>
+          </Col>
+
+          <Col xs={24} xl={8}>
+            <Card
+              bordered={false}
+              title={
+                <Space>
+                  <Badge status="success" />
+                  <span>Prontos</span>
+                  <Tag>{pedidosProntos.length}</Tag>
+                </Space>
+              }
+            >
+              {pedidosProntos.length ? (
+                pedidosProntos.map(renderPedidoCard)
+              ) : (
+                <Empty description="Nenhum pedido pronto" />
+              )}
+            </Card>
+          </Col>
+        </Row>
+      )}
     </>
   )
 }

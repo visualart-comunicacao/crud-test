@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from "react";
 import {
   Row,
   Col,
@@ -25,7 +25,7 @@ import {
   Steps,
   Alert,
   Spin,
-} from 'antd'
+} from "antd";
 import {
   SearchOutlined,
   PlusOutlined,
@@ -40,132 +40,120 @@ import {
   UserOutlined,
   CheckCircleOutlined,
   EditOutlined,
-} from '@ant-design/icons'
-import PageTitle from '../../components/common/PageTitle'
-import http from '@/api/http'
+} from "@ant-design/icons";
+import PageTitle from "../../components/common/PageTitle";
+import http from "@/api/http";
 
-const { Text, Title } = Typography
-const { TextArea } = Input
+const { Text, Title } = Typography;
+const { TextArea } = Input;
 
 const STATUS_COMANDA = {
-  LIVRE: 'LIVRE',
-  ABERTA: 'ABERTA',
-  FINALIZADA: 'FECHADA',
-  CANCELADA: 'CANCELADA',
-}
+  LIVRE: "LIVRE",
+  ABERTA: "ABERTA",
+  FINALIZADA: "FECHADA",
+  CANCELADA: "CANCELADA",
+};
 
 const statusConfig = {
   LIVRE: {
-    label: 'Livre',
-    color: 'default',
-    borderColor: '#303030',
-    bg: '#141414',
-    badge: 'default',
+    label: "Livre",
+    color: "default",
+    borderColor: "#303030",
+    bg: "#141414",
+    badge: "default",
   },
   ABERTA: {
-    label: 'Aberta',
-    color: 'processing',
-    borderColor: '#1677ff',
-    bg: '#111a2c',
-    badge: 'processing',
+    label: "Aberta",
+    color: "processing",
+    borderColor: "#1677ff",
+    bg: "#111a2c",
+    badge: "processing",
   },
   FECHADA: {
-    label: 'Finalizada',
-    color: 'success',
-    borderColor: '#52c41a',
-    bg: '#162312',
-    badge: 'success',
+    label: "Finalizada",
+    color: "success",
+    borderColor: "#52c41a",
+    bg: "#162312",
+    badge: "success",
   },
   CANCELADA: {
-    label: 'Cancelada',
-    color: 'default',
-    borderColor: '#434343',
-    bg: '#141414',
-    badge: 'default',
+    label: "Cancelada",
+    color: "default",
+    borderColor: "#434343",
+    bg: "#141414",
+    badge: "default",
   },
-}
+};
 
 function formatCurrency(value) {
-  return Number(value || 0).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  })
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }
 
 function getCurrentUser() {
   try {
-    const raw = localStorage.getItem('user')
-    return raw ? JSON.parse(raw) : null
+    const raw = localStorage.getItem("user");
+    return raw ? JSON.parse(raw) : null;
   } catch {
-    return null
+    return null;
   }
 }
 
-function getApiError(error, fallback) {
-  return error?.response?.data?.message || fallback
-}
-
 function getTableDisplayName(table) {
-  if (!table) return '-'
-  return table.nome || `Mesa ${String(table.numero).padStart(2, '0')}`
+  if (!table) return "-";
+  return table.nome || `Mesa ${String(table.numero).padStart(2, "0")}`;
 }
 
 function getOrderStatus(order) {
-  if (!order) return STATUS_COMANDA.LIVRE
-  if (order.status === 'ABERTA') return STATUS_COMANDA.ABERTA
-  if (order.status === 'FECHADA') return STATUS_COMANDA.FINALIZADA
-  if (order.status === 'CANCELADA') return STATUS_COMANDA.CANCELADA
-  return STATUS_COMANDA.ABERTA
+  if (!order) return STATUS_COMANDA.LIVRE;
+  if (order.status === "ABERTA") return STATUS_COMANDA.ABERTA;
+  if (order.status === "FECHADA") return STATUS_COMANDA.FINALIZADA;
+  if (order.status === "CANCELADA") return STATUS_COMANDA.CANCELADA;
+  return STATUS_COMANDA.ABERTA;
 }
 
 function hasKitchenSentFlag(notes) {
-  return String(notes || '').includes('[KITCHEN_SENT]')
-}
-
-function hasKitchenPreparingFlag(notes) {
-  return String(notes || '').includes('[KITCHEN_PREPARO]')
-}
-
-function hasKitchenReadyFlag(notes) {
-  return String(notes || '').includes('[KITCHEN_READY]')
+  return String(notes || "").includes("[KITCHEN_SENT]");
 }
 
 function removeKitchenFlags(notes) {
-  return String(notes || '')
-    .replace(/\[KITCHEN_SENT\]/g, '')
-    .replace(/\[KITCHEN_PREPARO\]/g, '')
-    .replace(/\[KITCHEN_READY\]/g, '')
-    .replace(/\[KITCHEN_FINISHED\]/g, '')
-    .trim()
+  return String(notes || "")
+    .replace(/\[KITCHEN_SENT\]/g, "")
+    .replace(/\[KITCHEN_PREPARO\]/g, "")
+    .replace(/\[KITCHEN_READY\]/g, "")
+    .replace(/\[KITCHEN_FINISHED\]/g, "")
+    .trim();
 }
 
 function buildMesas(tables, orders) {
   return tables
     .map((table) => {
       const openOrder = orders.find(
-        (order) => order.tableId === table.id && order.status === 'ABERTA',
-      )
+        (order) => order.tableId === table.id && order.status === "ABERTA",
+      );
 
       if (!openOrder) {
         return {
           id: table.id,
           mesaId: table.id,
-          mesa: table.nome || `Mesa ${String(table.numero).padStart(2, '0')}`,
+          mesa: table.nome || `Mesa ${String(table.numero).padStart(2, "0")}`,
           numero: table.numero,
           nome: table.nome,
-          cliente: '',
+          cliente: "",
           pessoas: 0,
           status: STATUS_COMANDA.LIVRE,
           total: 0,
-          criadaEm: '',
-          ultimaAtualizacao: '',
-          garcom: '',
-          tipoAtendimento: 'salao',
+          criadaEm: "",
+          ultimaAtualizacao: "",
+          garcom: "",
+          tipoAtendimento: "salao",
           itens: [],
           ativo: table.ativo,
           rawTable: table,
           rawOrder: null,
-        }
+        };
       }
 
       return {
@@ -173,541 +161,533 @@ function buildMesas(tables, orders) {
         mesaId: table.id,
         mesa:
           openOrder.table?.nome ||
-          `Mesa ${String(openOrder.table?.numero || table.numero).padStart(2, '0')}`,
+          `Mesa ${String(openOrder.table?.numero || table.numero).padStart(2, "0")}`,
         numero: table.numero,
         nome: table.nome,
-        cliente: openOrder.customerName || '',
+        cliente: openOrder.customerName || "",
         pessoas: 0,
         status: getOrderStatus(openOrder),
         total: Number(openOrder.total || 0),
-        criadaEm: openOrder.openedAt || '',
-        ultimaAtualizacao: openOrder.updatedAt || '',
-        garcom: openOrder.createdBy?.name || openOrder.createdBy?.username || '',
-        tipoAtendimento: 'salao',
+        criadaEm: openOrder.openedAt || "",
+        ultimaAtualizacao: openOrder.updatedAt || "",
+        garcom:
+          openOrder.createdBy?.name || openOrder.createdBy?.username || "",
+        tipoAtendimento: "salao",
         itens: openOrder.items || [],
         ativo: table.ativo,
         rawTable: table,
         rawOrder: openOrder,
-      }
+      };
     })
-    .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0))
-}
-
-function formatPaymentMethod(method) {
-  const map = {
-    DINHEIRO: 'Dinheiro',
-    PIX: 'PIX',
-    DEBITO: 'Cartão de débito',
-    CREDITO: 'Cartão de crédito',
-    OUTRO: 'Outro',
-  }
-
-  return map[method] || method || '-'
+    .sort((a, b) => Number(a.numero || 0) - Number(b.numero || 0));
 }
 
 export default function Comandas() {
-  const user = getCurrentUser()
+  const user = getCurrentUser();
 
-  const [tabAtiva, setTabAtiva] = useState('comandas')
+  const [tabAtiva, setTabAtiva] = useState("comandas");
 
-  const [tables, setTables] = useState([])
-  const [orders, setOrders] = useState([])
-  const [products, setProducts] = useState([])
-  const [caixaAtual, setCaixaAtual] = useState(null)
+  const [tables, setTables] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
 
-  const [loadingPage, setLoadingPage] = useState(true)
-  const [loadingAction, setLoadingAction] = useState(false)
+  const [loadingPage, setLoadingPage] = useState(true);
+  const [loadingAction, setLoadingAction] = useState(false);
 
-  const [busca, setBusca] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState('todos')
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
 
-  const [comandaSelecionadaId, setComandaSelecionadaId] = useState(null)
+  const [comandaSelecionadaId, setComandaSelecionadaId] = useState(null);
 
-  const [modalNovaMesaOpen, setModalNovaMesaOpen] = useState(false)
-  const [modalEditarMesaOpen, setModalEditarMesaOpen] = useState(false)
-  const [modalNovaComandaOpen, setModalNovaComandaOpen] = useState(false)
-  const [modalAdicionarItemOpen, setModalAdicionarItemOpen] = useState(false)
-  const [modalEditarItemOpen, setModalEditarItemOpen] = useState(false)
-  const [modalTransferenciaOpen, setModalTransferenciaOpen] = useState(false)
-  const [modalFechamentoOpen, setModalFechamentoOpen] = useState(false)
-  const [modalDividirContaOpen, setModalDividirContaOpen] = useState(false)
+  const [modalNovaMesaOpen, setModalNovaMesaOpen] = useState(false);
+  const [modalEditarMesaOpen, setModalEditarMesaOpen] = useState(false);
+  const [modalNovaComandaOpen, setModalNovaComandaOpen] = useState(false);
+  const [modalAdicionarItemOpen, setModalAdicionarItemOpen] = useState(false);
+  const [modalEditarItemOpen, setModalEditarItemOpen] = useState(false);
+  const [modalTransferenciaOpen, setModalTransferenciaOpen] = useState(false);
+  const [modalFechamentoOpen, setModalFechamentoOpen] = useState(false);
+  const [modalDividirContaOpen, setModalDividirContaOpen] = useState(false);
 
-  const [mesaEditando, setMesaEditando] = useState(null)
-  const [itemEditando, setItemEditando] = useState(null)
+  const [mesaEditando, setMesaEditando] = useState(null);
+  const [itemEditando, setItemEditando] = useState(null);
 
-  const [formNovaMesa] = Form.useForm()
-  const [formEditarMesa] = Form.useForm()
-  const [formNovaComanda] = Form.useForm()
-  const [formAdicionarItem] = Form.useForm()
-  const [formEditarItem] = Form.useForm()
-  const [formTransferencia] = Form.useForm()
-  const [formFechamento] = Form.useForm()
-  const [formDividirConta] = Form.useForm()
+  const [formNovaMesa] = Form.useForm();
+  const [formEditarMesa] = Form.useForm();
+  const [formNovaComanda] = Form.useForm();
+  const [formAdicionarItem] = Form.useForm();
+  const [formEditarItem] = Form.useForm();
+  const [formTransferencia] = Form.useForm();
+  const [formFechamento] = Form.useForm();
+  const [formDividirConta] = Form.useForm();
 
   async function carregarTudo() {
     try {
-      setLoadingPage(true)
+      setLoadingPage(true);
 
-      const [tablesRes, ordersRes, productsRes, cashRegisterRes] = await Promise.all([
-        http.get('/tables'),
-        http.get('/orders'),
-        http.get('/products'),
-        http.get('/cash-register/current').catch(() => ({ data: null })),
-      ])
+      const [tablesRes, ordersRes, productsRes] = await Promise.all([
+        http.get("/tables"),
+        http.get("/orders"),
+        http.get("/products"),
+      ]);
 
-      setTables(tablesRes.data || [])
-      setOrders(ordersRes.data || [])
-      setProducts(productsRes.data || [])
-      setCaixaAtual(cashRegisterRes?.data?.caixa || null)
+      setTables(tablesRes.data || []);
+      setOrders(ordersRes.data || []);
+      setProducts(productsRes.data || []);
     } catch (error) {
-      message.error(getApiError(error, 'Não foi possível carregar os dados.'))
+      message.error(
+        error?.response?.data?.message || "Não foi possível carregar os dados.",
+      );
     } finally {
-      setLoadingPage(false)
-    }
-  }
-
-  async function carregarCaixaAtual() {
-    try {
-      const { data } = await http.get('/cash-register/current')
-      setCaixaAtual(data?.caixa || null)
-      return data?.caixa || null
-    } catch {
-      setCaixaAtual(null)
-      return null
+      setLoadingPage(false);
     }
   }
 
   useEffect(() => {
-    carregarTudo()
-  }, [])
+    carregarTudo();
+  }, []);
 
   const produtosPorCategoria = useMemo(() => {
     return products.reduce((acc, produto) => {
-      const categoria = produto.categoriaNome || 'Sem categoria'
-      if (!acc[categoria]) acc[categoria] = []
-      acc[categoria].push(produto)
-      return acc
-    }, {})
-  }, [products])
+      const categoria = produto.categoriaNome || "Sem categoria";
+      if (!acc[categoria]) acc[categoria] = [];
+      acc[categoria].push(produto);
+      return acc;
+    }, {});
+  }, [products]);
 
-  const comandas = useMemo(() => buildMesas(tables, orders), [tables, orders])
+  const comandas = useMemo(() => buildMesas(tables, orders), [tables, orders]);
 
   const primeiraAtiva = useMemo(
     () => comandas.find((item) => item.status !== STATUS_COMANDA.LIVRE) || null,
     [comandas],
-  )
+  );
 
   useEffect(() => {
     if (!comandaSelecionadaId && primeiraAtiva) {
-      setComandaSelecionadaId(primeiraAtiva.id)
+      setComandaSelecionadaId(primeiraAtiva.id);
     }
-  }, [comandaSelecionadaId, primeiraAtiva])
+  }, [comandaSelecionadaId, primeiraAtiva]);
 
   const comandaSelecionada =
-    comandas.find((item) => String(item.id) === String(comandaSelecionadaId)) || null
+    comandas.find((item) => String(item.id) === String(comandaSelecionadaId)) ||
+    null;
 
   const comandasFiltradas = useMemo(() => {
     return comandas.filter((comanda) => {
-      const texto = busca.toLowerCase()
+      const texto = busca.toLowerCase();
 
       const matchBusca =
-        String(comanda.mesa || '').toLowerCase().includes(texto) ||
-        String(comanda.cliente || '').toLowerCase().includes(texto) ||
-        String(comanda.id || '').includes(texto) ||
-        String(comanda.garcom || '').toLowerCase().includes(texto)
+        String(comanda.mesa || "")
+          .toLowerCase()
+          .includes(texto) ||
+        String(comanda.cliente || "")
+          .toLowerCase()
+          .includes(texto) ||
+        String(comanda.id || "").includes(texto) ||
+        String(comanda.garcom || "")
+          .toLowerCase()
+          .includes(texto);
 
       const matchStatus =
-        filtroStatus === 'todos' ? true : comanda.status === filtroStatus
+        filtroStatus === "todos" ? true : comanda.status === filtroStatus;
 
-      return matchBusca && matchStatus
-    })
-  }, [comandas, busca, filtroStatus])
+      return matchBusca && matchStatus;
+    });
+  }, [comandas, busca, filtroStatus]);
 
   const resumo = useMemo(() => {
     return {
-      ativas: comandas.filter((item) => item.status !== STATUS_COMANDA.LIVRE).length,
-      abertas: comandas.filter((item) => item.status === STATUS_COMANDA.ABERTA).length,
-      finalizadas: orders.filter((item) => item.status === 'FECHADA').length,
-      livres: comandas.filter((item) => item.status === STATUS_COMANDA.LIVRE).length,
-    }
-  }, [comandas, orders])
+      ativas: comandas.filter((item) => item.status !== STATUS_COMANDA.LIVRE)
+        .length,
+      abertas: comandas.filter((item) => item.status === STATUS_COMANDA.ABERTA)
+        .length,
+      finalizadas: orders.filter((item) => item.status === "FECHADA").length,
+      livres: comandas.filter((item) => item.status === STATUS_COMANDA.LIVRE)
+        .length,
+    };
+  }, [comandas, orders]);
 
   const mesasLivres = useMemo(
-    () => comandas.filter((item) => item.status === STATUS_COMANDA.LIVRE && item.ativo),
+    () =>
+      comandas.filter(
+        (item) => item.status === STATUS_COMANDA.LIVRE && item.ativo,
+      ),
     [comandas],
-  )
+  );
 
   const mesasOcupadas = useMemo(
     () => comandas.filter((item) => item.status !== STATUS_COMANDA.LIVRE),
     [comandas],
-  )
+  );
 
   const historico = useMemo(() => {
     return orders
-      .filter((item) => item.status === 'FECHADA')
-      .map((item) => {
-        const pagamentos = Array.isArray(item.payments)
-          ? item.payments.filter((payment) => payment.status === 'PAGO')
-          : []
-
-        const pagamento = pagamentos.length
-          ? pagamentos.map((payment) => formatPaymentMethod(payment.method)).join(' + ')
-          : '-'
-
-        return {
-          id: item.id,
-          mesa: getTableDisplayName(item.table),
-          cliente: item.customerName || 'Mesa sem identificação',
-          pagamento,
-          total: Number(item.total || 0),
-          troco: 0,
-          divisao: pagamentos.length || 1,
-          fechadoEm: item.closedAt || '-',
-        }
-      })
-  }, [orders])
+      .filter((item) => item.status === "FECHADA")
+      .map((item) => ({
+        id: item.id,
+        mesa: getTableDisplayName(item.table),
+        cliente: item.customerName || "Mesa sem identificação",
+        pagamento: "-",
+        total: Number(item.total || 0),
+        troco: 0,
+        divisao: 1,
+        fechadoEm: item.closedAt || "-",
+      }));
+  }, [orders]);
 
   const totaisCaixa = useMemo(() => {
-    const pagamentos = orders.flatMap((order) =>
-      Array.isArray(order.payments)
-        ? order.payments.filter((payment) => payment.status === 'PAGO')
-        : [],
-    )
-
+    const totalDia = historico.reduce((acc, item) => acc + item.total, 0);
     return {
-      totalDia: pagamentos.reduce((acc, payment) => acc + Number(payment.amount || 0), 0),
-      pix: pagamentos
-        .filter((payment) => payment.method === 'PIX')
-        .reduce((acc, payment) => acc + Number(payment.amount || 0), 0),
-      credito: pagamentos
-        .filter((payment) => payment.method === 'CREDITO')
-        .reduce((acc, payment) => acc + Number(payment.amount || 0), 0),
-      debito: pagamentos
-        .filter((payment) => payment.method === 'DEBITO')
-        .reduce((acc, payment) => acc + Number(payment.amount || 0), 0),
-      dinheiro: pagamentos
-        .filter((payment) => payment.method === 'DINHEIRO')
-        .reduce((acc, payment) => acc + Number(payment.amount || 0), 0),
-    }
-  }, [orders])
+      totalDia,
+      pix: 0,
+      credito: 0,
+      debito: 0,
+      dinheiro: 0,
+    };
+  }, [historico]);
 
-  const produtoSelecionadoId = Form.useWatch('produtoId', formAdicionarItem)
+  const produtoSelecionadoId = Form.useWatch("produtoId", formAdicionarItem);
   const produtoSelecionado = products.find(
     (produto) => String(produto.id) === String(produtoSelecionadoId),
-  )
+  );
 
-  const produtoEditandoSelecionadoId = Form.useWatch('produtoId', formEditarItem)
+  const produtoEditandoSelecionadoId = Form.useWatch(
+    "produtoId",
+    formEditarItem,
+  );
   const produtoEditandoSelecionado = products.find(
     (produto) => String(produto.id) === String(produtoEditandoSelecionadoId),
-  )
+  );
 
-  const pagamentoFechamento = Form.useWatch('pagamento', formFechamento)
-  const valorRecebidoFechamento = Form.useWatch('valorRecebido', formFechamento)
-  const divisaoFechamento = Form.useWatch('divisao', formFechamento)
+  const pagamentoFechamento = Form.useWatch("pagamento", formFechamento);
+  const valorRecebidoFechamento = Form.useWatch(
+    "valorRecebido",
+    formFechamento,
+  );
+  const divisaoFechamento = Form.useWatch("divisao", formFechamento);
 
-  const totalSelecionado = Number(comandaSelecionada?.total || 0)
-  const divisaoAtual = Number(divisaoFechamento || 1)
-  const totalPorPessoa = divisaoAtual > 0 ? totalSelecionado / divisaoAtual : totalSelecionado
+  const totalSelecionado = Number(comandaSelecionada?.total || 0);
+  const divisaoAtual = Number(divisaoFechamento || 1);
+  const totalPorPessoa =
+    divisaoAtual > 0 ? totalSelecionado / divisaoAtual : totalSelecionado;
   const trocoFechamento =
-    pagamentoFechamento === 'DINHEIRO'
+    pagamentoFechamento === "Dinheiro"
       ? Math.max(Number(valorRecebidoFechamento || 0) - totalSelecionado, 0)
-      : 0
+      : 0;
 
-  const qtdDivisaoConta = Form.useWatch('qtdPessoas', formDividirConta)
-  const qtdDivisaoAtual = Number(qtdDivisaoConta || 1)
+  const qtdDivisaoConta = Form.useWatch("qtdPessoas", formDividirConta);
+  const qtdDivisaoAtual = Number(qtdDivisaoConta || 1);
   const valorDivisaoConta =
-    qtdDivisaoAtual > 0 ? totalSelecionado / qtdDivisaoAtual : totalSelecionado
+    qtdDivisaoAtual > 0 ? totalSelecionado / qtdDivisaoAtual : totalSelecionado;
 
   const selecionarComanda = (comanda) => {
-    setComandaSelecionadaId(comanda.id)
-    setTabAtiva('comandas')
-  }
-
-  const imprimirComanda = async (orderId) => {
-    try {
-      const response = await http.get(`/orders/${orderId}/receipt`, {
-        responseType: 'blob',
-      })
-
-      const file = new Blob([response.data], { type: 'application/pdf' })
-      const fileURL = URL.createObjectURL(file)
-      window.open(fileURL, '_blank')
-    } catch {
-      message.error('Não foi possível gerar a impressão da comanda.')
-    }
-  }
+    setComandaSelecionadaId(comanda.id);
+    setTabAtiva("comandas");
+  };
 
   const abrirModalNovaMesa = () => {
-    formNovaMesa.resetFields()
-    setModalNovaMesaOpen(true)
-  }
+    formNovaMesa.resetFields();
+    setModalNovaMesaOpen(true);
+  };
 
   const salvarNovaMesa = async () => {
     try {
-      const values = await formNovaMesa.validateFields()
-      setLoadingAction(true)
+      const values = await formNovaMesa.validateFields();
+      setLoadingAction(true);
 
-      const { data } = await http.post('/tables', {
+      const { data } = await http.post("/tables", {
         numero: values.numero,
         nome: values.nome || null,
-      })
+      });
 
-      setTables((prev) => [...prev, data].sort((a, b) => Number(a.numero) - Number(b.numero)))
-      setModalNovaMesaOpen(false)
-      formNovaMesa.resetFields()
-      message.success('Mesa cadastrada com sucesso')
+      setTables((prev) =>
+        [...prev, data].sort((a, b) => Number(a.numero) - Number(b.numero)),
+      );
+      setModalNovaMesaOpen(false);
+      formNovaMesa.resetFields();
+      message.success("Mesa cadastrada com sucesso");
     } catch (error) {
       if (!error?.errorFields) {
-        message.error(getApiError(error, 'Não foi possível cadastrar a mesa.'))
+        message.error(
+          error?.response?.data?.message ||
+            "Não foi possível cadastrar a mesa.",
+        );
       }
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const abrirEditarMesa = (mesa) => {
-    setMesaEditando(mesa)
-    formEditarMesa.resetFields()
+    setMesaEditando(mesa);
+    formEditarMesa.resetFields();
     formEditarMesa.setFieldsValue({
       numero: mesa.numero,
-      nome: mesa.nome || '',
-      status: mesa.rawTable?.status || 'LIVRE',
-    })
-    setModalEditarMesaOpen(true)
-  }
+      nome: mesa.nome || "",
+      status: mesa.rawTable?.status || "LIVRE",
+    });
+    setModalEditarMesaOpen(true);
+  };
 
   const salvarEdicaoMesa = async () => {
     try {
-      const values = await formEditarMesa.validateFields()
-      if (!mesaEditando?.mesaId) return
+      const values = await formEditarMesa.validateFields();
+      if (!mesaEditando?.mesaId) return;
 
-      setLoadingAction(true)
+      setLoadingAction(true);
 
       const { data } = await http.put(`/tables/${mesaEditando.mesaId}`, {
         numero: values.numero,
         nome: values.nome || null,
         status: values.status,
-      })
+      });
 
       setTables((prev) =>
         prev
           .map((item) => (item.id === mesaEditando.mesaId ? data : item))
           .sort((a, b) => Number(a.numero) - Number(b.numero)),
-      )
+      );
 
-      setModalEditarMesaOpen(false)
-      setMesaEditando(null)
-      message.success('Mesa atualizada com sucesso')
+      setModalEditarMesaOpen(false);
+      setMesaEditando(null);
+      message.success("Mesa atualizada com sucesso");
     } catch (error) {
       if (!error?.errorFields) {
-        message.error(getApiError(error, 'Não foi possível atualizar a mesa.'))
+        message.error(
+          error?.response?.data?.message ||
+            "Não foi possível atualizar a mesa.",
+        );
       }
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const alternarStatusMesa = async (mesa) => {
     try {
       if (mesa.status !== STATUS_COMANDA.LIVRE) {
-        message.warning('Não é possível inativar uma mesa com comanda aberta.')
-        return
+        message.warning("Não é possível inativar uma mesa com comanda aberta.");
+        return;
       }
 
-      setLoadingAction(true)
+      setLoadingAction(true);
 
-      const { data } = await http.patch(`/tables/${mesa.mesaId}/status`)
+      const { data } = await http.patch(`/tables/${mesa.mesaId}/status`);
 
       setTables((prev) =>
         prev
           .map((item) => (item.id === mesa.mesaId ? data : item))
           .sort((a, b) => Number(a.numero) - Number(b.numero)),
-      )
+      );
 
-      message.success(`Mesa ${mesa.ativo ? 'inativada' : 'ativada'} com sucesso`)
+      message.success(
+        `Mesa ${mesa.ativo ? "inativada" : "ativada"} com sucesso`,
+      );
     } catch (error) {
-      message.error(getApiError(error, 'Não foi possível alterar a mesa.'))
+      message.error(
+        error?.response?.data?.message || "Não foi possível alterar a mesa.",
+      );
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const abrirModalNovaComanda = () => {
-    formNovaComanda.resetFields()
+    formNovaComanda.resetFields();
     formNovaComanda.setFieldsValue({
       pessoas: 1,
-      tipoAtendimento: 'salao',
-      garcom: user?.name || user?.username || '',
-    })
-    setModalNovaComandaOpen(true)
-  }
+      tipoAtendimento: "salao",
+      garcom: user?.name || user?.username || "",
+    });
+    setModalNovaComandaOpen(true);
+  };
 
   const salvarNovaComanda = async () => {
     try {
-      const values = await formNovaComanda.validateFields()
-      setLoadingAction(true)
+      const values = await formNovaComanda.validateFields();
+      setLoadingAction(true);
 
-      const mesa = mesasLivres.find((item) => item.mesa === values.mesa)
+      const mesa = mesasLivres.find((item) => item.mesa === values.mesa);
 
       if (!mesa) {
-        message.error('Mesa não encontrada')
-        return
+        message.error("Mesa não encontrada");
+        return;
       }
 
-      const { data } = await http.post('/orders', {
+      const { data } = await http.post("/orders", {
         tableId: mesa.mesaId,
         customerName: values.cliente || null,
         notes: values.observacao || null,
-      })
+      });
 
-      setOrders((prev) => [data, ...prev])
-      setComandaSelecionadaId(data.id)
-      setModalNovaComandaOpen(false)
-      message.success('Nova comanda aberta com sucesso')
+      setOrders((prev) => [data, ...prev]);
+      setComandaSelecionadaId(data.id);
+      setModalNovaComandaOpen(false);
+      message.success("Nova comanda aberta com sucesso");
     } catch (error) {
       if (!error?.errorFields) {
-        message.error(getApiError(error, 'Não foi possível abrir a comanda.'))
+        message.error(
+          error?.response?.data?.message || "Não foi possível abrir a comanda.",
+        );
       }
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const abrirModalAdicionarItem = () => {
     if (!comandaSelecionada?.rawOrder) {
-      message.warning('Selecione uma comanda ativa')
-      return
+      message.warning("Selecione uma comanda ativa");
+      return;
     }
 
-    formAdicionarItem.resetFields()
+    formAdicionarItem.resetFields();
     formAdicionarItem.setFieldsValue({
       qtd: 1,
-      observacao: '',
-    })
-    setModalAdicionarItemOpen(true)
-  }
+      observacao: "",
+    });
+    setModalAdicionarItemOpen(true);
+  };
 
   const salvarNovoItem = async () => {
     try {
-      const values = await formAdicionarItem.validateFields()
-      if (!comandaSelecionada?.rawOrder) return
+      const values = await formAdicionarItem.validateFields();
+      if (!comandaSelecionada?.rawOrder) return;
 
-      setLoadingAction(true)
+      setLoadingAction(true);
 
-      const { data } = await http.post(`/orders/${comandaSelecionada.rawOrder.id}/items`, {
-        productId: values.produtoId,
-        quantity: values.qtd,
-        notes: values.observacao || '',
-      })
+      const { data } = await http.post(
+        `/orders/${comandaSelecionada.rawOrder.id}/items`,
+        {
+          productId: values.produtoId,
+          quantity: values.qtd,
+          notes: values.observacao || "",
+        },
+      );
 
       setOrders((prev) =>
-        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
-      )
+        prev.map((item) =>
+          item.id === comandaSelecionada.rawOrder.id ? data : item,
+        ),
+      );
 
-      setModalAdicionarItemOpen(false)
-      message.success('Item adicionado à comanda')
+      setModalAdicionarItemOpen(false);
+      message.success("Item adicionado à comanda");
     } catch (error) {
       if (!error?.errorFields) {
-        message.error(getApiError(error, 'Não foi possível adicionar o item.'))
+        message.error(
+          error?.response?.data?.message ||
+            "Não foi possível adicionar o item.",
+        );
       }
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const abrirModalEditarItem = (item) => {
-    if (!comandaSelecionada?.rawOrder) return
+    if (!comandaSelecionada?.rawOrder) return;
 
-    setItemEditando(item)
-    formEditarItem.resetFields()
+    setItemEditando(item);
+    formEditarItem.resetFields();
     formEditarItem.setFieldsValue({
       categoria: products.find((p) => p.id === item.productId)?.categoriaNome,
       produtoId: item.productId,
       qtd: item.quantity,
-      observacao: removeKitchenFlags(item.notes || ''),
-    })
-    setModalEditarItemOpen(true)
-  }
+      observacao: removeKitchenFlags(item.notes || ""),
+    });
+    setModalEditarItemOpen(true);
+  };
 
   const salvarEdicaoItem = async () => {
     try {
-      const values = await formEditarItem.validateFields()
-      if (!comandaSelecionada?.rawOrder || !itemEditando) return
+      const values = await formEditarItem.validateFields();
+      if (!comandaSelecionada?.rawOrder || !itemEditando) return;
 
-      setLoadingAction(true)
+      setLoadingAction(true);
 
       const { data } = await http.put(
         `/orders/${comandaSelecionada.rawOrder.id}/items/${itemEditando.id}`,
         {
           productId: values.produtoId,
           quantity: values.qtd,
-          notes: values.observacao || '',
+          notes: values.observacao || "",
         },
-      )
+      );
 
       setOrders((prev) =>
-        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
-      )
+        prev.map((item) =>
+          item.id === comandaSelecionada.rawOrder.id ? data : item,
+        ),
+      );
 
-      setModalEditarItemOpen(false)
-      setItemEditando(null)
-      message.success('Item atualizado com sucesso')
+      setModalEditarItemOpen(false);
+      setItemEditando(null);
+      message.success("Item atualizado com sucesso");
     } catch (error) {
       if (!error?.errorFields) {
-        message.error(getApiError(error, 'Não foi possível editar o item.'))
+        message.error(
+          error?.response?.data?.message || "Não foi possível editar o item.",
+        );
       }
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const removerItem = async (itemId) => {
-    if (!comandaSelecionada?.rawOrder) return
+    if (!comandaSelecionada?.rawOrder) return;
 
     try {
-      setLoadingAction(true)
+      setLoadingAction(true);
 
       const { data } = await http.patch(
         `/orders/${comandaSelecionada.rawOrder.id}/items/${itemId}/cancel`,
         {
-          notes: 'Cancelado pelo usuário',
+          notes: "Cancelado pelo usuário",
         },
-      )
+      );
 
       setOrders((prev) =>
-        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
-      )
+        prev.map((item) =>
+          item.id === comandaSelecionada.rawOrder.id ? data : item,
+        ),
+      );
 
-      message.success('Item cancelado')
+      message.success("Item cancelado");
     } catch (error) {
-      message.error(getApiError(error, 'Não foi possível cancelar o item.'))
+      message.error(
+        error?.response?.data?.message || "Não foi possível cancelar o item.",
+      );
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const abrirTransferencia = () => {
     if (!comandaSelecionada?.rawOrder) {
-      message.warning('Selecione uma comanda ativa')
-      return
+      message.warning("Selecione uma comanda ativa");
+      return;
     }
 
-    formTransferencia.resetFields()
-    setModalTransferenciaOpen(true)
-  }
+    formTransferencia.resetFields();
+    setModalTransferenciaOpen(true);
+  };
 
   const confirmarTransferencia = async () => {
     try {
-      const values = await formTransferencia.validateFields()
-      if (!comandaSelecionada?.rawOrder) return
+      const values = await formTransferencia.validateFields();
+      if (!comandaSelecionada?.rawOrder) return;
 
-      setLoadingAction(true)
+      setLoadingAction(true);
 
-      const mesaDestino = mesasLivres.find((item) => item.mesa === values.novaMesa)
+      const mesaDestino = mesasLivres.find(
+        (item) => item.mesa === values.novaMesa,
+      );
 
       if (!mesaDestino) {
-        message.error('Mesa de destino não encontrada')
-        return
+        message.error("Mesa de destino não encontrada");
+        return;
       }
 
       const { data } = await http.patch(
@@ -715,340 +695,320 @@ export default function Comandas() {
         {
           newTableId: mesaDestino.mesaId,
         },
-      )
+      );
 
       setOrders((prev) =>
-        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
-      )
+        prev.map((item) =>
+          item.id === comandaSelecionada.rawOrder.id ? data : item,
+        ),
+      );
 
-      setModalTransferenciaOpen(false)
-      message.success('Mesa transferida com sucesso')
+      setModalTransferenciaOpen(false);
+      message.success("Mesa transferida com sucesso");
     } catch (error) {
       if (!error?.errorFields) {
-        message.error(getApiError(error, 'Não foi possível transferir a mesa.'))
+        message.error(
+          error?.response?.data?.message ||
+            "Não foi possível transferir a mesa.",
+        );
       }
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const enviarParaCozinha = async () => {
     if (!comandaSelecionada?.rawOrder) {
-      message.warning('Selecione uma comanda ativa')
-      return
+      message.warning("Selecione uma comanda ativa");
+      return;
     }
 
     const itensAtivos = (comandaSelecionada.itens || []).filter(
-      (item) => item.status === 'ATIVO',
-    )
+      (item) => item.status === "ATIVO",
+    );
 
     if (!itensAtivos.length) {
-      message.warning('A comanda não possui itens ativos para envio')
-      return
+      message.warning("A comanda não possui itens ativos para envio");
+      return;
     }
 
-    const itensPendentes = itensAtivos.filter((item) => !hasKitchenSentFlag(item.notes))
+    const itensPendentes = itensAtivos.filter(
+      (item) => !hasKitchenSentFlag(item.notes),
+    );
 
     if (!itensPendentes.length) {
-      message.info('Todos os itens já foram enviados para a cozinha')
-      return
+      message.info("Todos os itens já foram enviados para a cozinha");
+      return;
     }
 
     try {
-      setLoadingAction(true)
+      setLoadingAction(true);
 
       const { data } = await http.patch(
         `/orders/${comandaSelecionada.rawOrder.id}/send-to-kitchen`,
-      )
+      );
 
       setOrders((prev) =>
-        prev.map((item) => (item.id === comandaSelecionada.rawOrder.id ? data : item)),
-      )
+        prev.map((item) =>
+          item.id === comandaSelecionada.rawOrder.id ? data : item,
+        ),
+      );
 
-      message.success('Itens enviados para a cozinha')
+      message.success("Itens enviados para a cozinha");
     } catch (error) {
-      message.error(getApiError(error, 'Não foi possível enviar para a cozinha.'))
+      message.error(
+        error?.response?.data?.message ||
+          "Não foi possível enviar para a cozinha.",
+      );
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
-  const abrirFechamento = async () => {
+  const abrirFechamento = () => {
     if (!comandaSelecionada?.rawOrder) {
-      message.warning('Selecione uma comanda ativa')
-      return
+      message.warning("Selecione uma comanda ativa");
+      return;
     }
 
     if (!comandaSelecionada.itens.length) {
-      message.warning('A comanda não possui itens')
-      return
+      message.warning("A comanda não possui itens");
+      return;
     }
 
-    const caixa = await carregarCaixaAtual()
-
-    if (!caixa || caixa.status !== 'ABERTO') {
-      message.error('Abra o caixa antes de fechar a comanda.')
-      return
-    }
-
-    formFechamento.resetFields()
+    formFechamento.resetFields();
     formFechamento.setFieldsValue({
-      pagamento: 'PIX',
+      pagamento: "PIX",
       valorRecebido: comandaSelecionada.total,
       divisao: 1,
-    })
-    setModalFechamentoOpen(true)
-  }
+    });
+    setModalFechamentoOpen(true);
+  };
 
   const confirmarFechamento = async () => {
     try {
-      const values = await formFechamento.validateFields()
-      if (!comandaSelecionada?.rawOrder) return
+      const values = await formFechamento.validateFields();
+      if (!comandaSelecionada?.rawOrder) return;
 
-      const total = Number(comandaSelecionada.total || 0)
-      const valorRecebido = Number(values.valorRecebido || 0)
-      const pagamentoDinheiro = values.pagamento === 'DINHEIRO'
-      const divisao = Math.max(Number(values.divisao || 1), 1)
+      const total = Number(comandaSelecionada.total);
+      const valorRecebido = Number(values.valorRecebido || 0);
+      const pagamentoDinheiro = values.pagamento === "Dinheiro";
 
       if (pagamentoDinheiro && valorRecebido < total) {
-        message.error('O valor recebido é menor que o total da comanda')
-        return
+        message.error("O valor recebido é menor que o total da comanda");
+        return;
       }
 
-      const caixa = await carregarCaixaAtual()
+      setLoadingAction(true);
 
-      if (!caixa || caixa.status !== 'ABERTO') {
-        message.error('Abra o caixa antes de fechar a comanda.')
-        return
-      }
+      const { data } = await http.patch(
+        `/orders/${comandaSelecionada.rawOrder.id}/close`,
+      );
 
-      setLoadingAction(true)
+      setOrders((prev) =>
+        prev.map((item) =>
+          item.id === comandaSelecionada.rawOrder.id ? data : item,
+        ),
+      );
 
-      const orderId = comandaSelecionada.rawOrder.id
-      const payments = []
-
-      if (divisao <= 1) {
-        payments.push({
-          method: values.pagamento,
-          amount: Number(total.toFixed(2)),
-        })
-      } else {
-        const valorBase = Number((total / divisao).toFixed(2))
-        let acumulado = 0
-
-        for (let index = 0; index < divisao; index += 1) {
-          const isLast = index === divisao - 1
-          const amount = isLast
-            ? Number((total - acumulado).toFixed(2))
-            : valorBase
-
-          acumulado += amount
-
-          payments.push({
-            method: values.pagamento,
-            amount,
-          })
-        }
-      }
-
-      await http.post(`/cash-register/order/${orderId}/payment`, {
-        payments,
-        notes: `Fechamento da comanda ${comandaSelecionada.mesa}`,
-      })
-
-      const [tablesRes, ordersRes, productsRes, cashRegisterRes] = await Promise.all([
-        http.get('/tables'),
-        http.get('/orders'),
-        http.get('/products'),
-        http.get('/cash-register/current').catch(() => ({ data: null })),
-      ])
-
-      const novasTables = tablesRes.data || []
-      const novasOrders = ordersRes.data || []
-      const novosProducts = productsRes.data || []
-
-      setTables(novasTables)
-      setOrders(novasOrders)
-      setProducts(novosProducts)
-      setCaixaAtual(cashRegisterRes?.data?.caixa || null)
-
-      const novasComandas = buildMesas(novasTables, novasOrders)
       const proximaComanda =
-        novasComandas.find(
-          (item) => String(item.id) !== String(orderId) && item.status !== STATUS_COMANDA.LIVRE,
-        ) || null
+        comandas.find(
+          (item) =>
+            String(item.id) !== String(comandaSelecionada.rawOrder.id) &&
+            item.status !== STATUS_COMANDA.LIVRE,
+        ) || null;
 
-      setComandaSelecionadaId(proximaComanda?.id || null)
-      setModalFechamentoOpen(false)
-      message.success('Conta fechada com sucesso')
-
-      Modal.confirm({
-        title: 'Impressão',
-        content: 'Deseja imprimir a comanda?',
-        okText: 'Sim, imprimir',
-        cancelText: 'Não',
-        centered: true,
-        onOk: async () => {
-          await imprimirComanda(orderId)
-        },
-      })
+      setComandaSelecionadaId(proximaComanda?.id || null);
+      setModalFechamentoOpen(false);
+      message.success("Conta fechada com sucesso");
     } catch (error) {
       if (!error?.errorFields) {
-        message.error(getApiError(error, 'Não foi possível fechar a comanda.'))
+        message.error(
+          error?.response?.data?.message ||
+            "Não foi possível fechar a comanda.",
+        );
       }
     } finally {
-      setLoadingAction(false)
+      setLoadingAction(false);
     }
-  }
+  };
 
   const abrirDividirConta = () => {
     if (!comandaSelecionada?.rawOrder) {
-      message.warning('Selecione uma comanda ativa')
-      return
+      message.warning("Selecione uma comanda ativa");
+      return;
     }
 
-    formDividirConta.resetFields()
+    formDividirConta.resetFields();
     formDividirConta.setFieldsValue({
       qtdPessoas: 1,
-    })
-    setModalDividirContaOpen(true)
-  }
+    });
+    setModalDividirContaOpen(true);
+  };
+
+  const imprimirComanda = async () => {
+    if (!comandaSelecionada?.rawOrder) {
+      message.warning("Selecione uma comanda ativa");
+      return;
+    }
+
+    try {
+      setLoadingAction(true);
+
+      const response = await http.get(
+        `/orders/${comandaSelecionada.rawOrder.id}/receipt`,
+        {
+          responseType: "blob",
+        },
+      );
+
+      const file = new Blob([response.data], { type: "application/pdf" });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, "_blank");
+    } catch (error) {
+      message.error("Não foi possível gerar a impressão da comanda.");
+    } finally {
+      setLoadingAction(false);
+    }
+  };
 
   const mesasTabColumns = [
     {
-      title: 'Mesa',
-      dataIndex: 'mesa',
+      title: "Mesa",
+      dataIndex: "mesa",
     },
     {
-      title: 'Número',
-      dataIndex: 'numero',
+      title: "Número",
+      dataIndex: "numero",
     },
     {
-      title: 'Cliente',
-      dataIndex: 'cliente',
-      render: (_, record) => record.cliente || '-',
+      title: "Cliente",
+      dataIndex: "cliente",
+      render: (_, record) => record.cliente || "-",
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
+      title: "Status",
+      dataIndex: "status",
       render: (status) => (
-        <Tag color={statusConfig[status]?.color || 'default'}>
+        <Tag color={statusConfig[status]?.color || "default"}>
           {statusConfig[status]?.label || status}
         </Tag>
       ),
     },
     {
-      title: 'Ativa',
-      dataIndex: 'ativo',
+      title: "Ativa",
+      dataIndex: "ativo",
       render: (ativo) => (
-        <Tag color={ativo ? 'success' : 'default'}>
-          {ativo ? 'Sim' : 'Não'}
-        </Tag>
+        <Tag color={ativo ? "success" : "default"}>{ativo ? "Sim" : "Não"}</Tag>
       ),
     },
     {
-      title: 'Total',
-      dataIndex: 'total',
+      title: "Total",
+      dataIndex: "total",
       render: (value) => formatCurrency(value),
     },
     {
-      title: 'Ações',
+      title: "Ações",
       render: (_, record) => (
         <Space>
           <Button type="link" onClick={() => selecionarComanda(record)}>
             Ver
           </Button>
-          <Button type="link" icon={<EditOutlined />} onClick={() => abrirEditarMesa(record)}>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => abrirEditarMesa(record)}
+          >
             Editar
           </Button>
           <Popconfirm
-            title={record.ativo ? 'Inativar mesa?' : 'Ativar mesa?'}
+            title={record.ativo ? "Inativar mesa?" : "Ativar mesa?"}
             onConfirm={() => alternarStatusMesa(record)}
           >
-            <Button type="link">{record.ativo ? 'Inativar' : 'Ativar'}</Button>
+            <Button type="link">{record.ativo ? "Inativar" : "Ativar"}</Button>
           </Popconfirm>
         </Space>
       ),
     },
-  ]
+  ];
 
   const caixaColumns = [
     {
-      title: 'Comanda',
-      dataIndex: 'id',
+      title: "Comanda",
+      dataIndex: "id",
       render: (id) => `#${String(id).slice(-6)}`,
     },
     {
-      title: 'Mesa',
-      dataIndex: 'mesa',
+      title: "Mesa",
+      dataIndex: "mesa",
     },
     {
-      title: 'Cliente',
-      dataIndex: 'cliente',
+      title: "Cliente",
+      dataIndex: "cliente",
     },
     {
-      title: 'Pagamento',
-      dataIndex: 'pagamento',
+      title: "Pagamento",
+      dataIndex: "pagamento",
       render: (pagamento) => <Tag>{pagamento}</Tag>,
     },
     {
-      title: 'Total',
-      dataIndex: 'total',
+      title: "Total",
+      dataIndex: "total",
       render: (value) => formatCurrency(value),
     },
     {
-      title: 'Troco',
-      dataIndex: 'troco',
+      title: "Troco",
+      dataIndex: "troco",
       render: (value) => formatCurrency(value || 0),
     },
     {
-      title: 'Fechado em',
-      dataIndex: 'fechadoEm',
+      title: "Fechado em",
+      dataIndex: "fechadoEm",
     },
-  ]
+  ];
 
   const historicoColumns = [
     {
-      title: 'Comanda',
-      dataIndex: 'id',
+      title: "Comanda",
+      dataIndex: "id",
       render: (id) => `#${String(id).slice(-6)}`,
     },
     {
-      title: 'Mesa',
-      dataIndex: 'mesa',
+      title: "Mesa",
+      dataIndex: "mesa",
     },
     {
-      title: 'Cliente',
-      dataIndex: 'cliente',
+      title: "Cliente",
+      dataIndex: "cliente",
     },
     {
-      title: 'Pagamento',
-      dataIndex: 'pagamento',
+      title: "Pagamento",
+      dataIndex: "pagamento",
     },
     {
-      title: 'Divisão',
-      dataIndex: 'divisao',
+      title: "Divisão",
+      dataIndex: "divisao",
       render: (value) => `${value}x`,
     },
     {
-      title: 'Valor',
-      dataIndex: 'total',
+      title: "Valor",
+      dataIndex: "total",
       render: (value) => formatCurrency(value),
     },
     {
-      title: 'Troco',
-      dataIndex: 'troco',
+      title: "Troco",
+      dataIndex: "troco",
       render: (value) => formatCurrency(value || 0),
     },
     {
-      title: 'Horário',
-      dataIndex: 'fechadoEm',
+      title: "Horário",
+      dataIndex: "fechadoEm",
     },
-  ]
+  ];
 
   const itemsTabs = [
     {
-      key: 'comandas',
+      key: "comandas",
       label: (
         <span>
           <ShoppingCartOutlined /> Comandas
@@ -1073,21 +1033,21 @@ export default function Comandas() {
                 <Col xs={24} md={7}>
                   <Select
                     size="large"
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                     value={filtroStatus}
                     onChange={setFiltroStatus}
                     options={[
-                      { label: 'Todos os status', value: 'todos' },
-                      { label: 'Livre', value: STATUS_COMANDA.LIVRE },
-                      { label: 'Aberta', value: STATUS_COMANDA.ABERTA },
-                      { label: 'Finalizada', value: STATUS_COMANDA.FINALIZADA },
-                      { label: 'Cancelada', value: STATUS_COMANDA.CANCELADA },
+                      { label: "Todos os status", value: "todos" },
+                      { label: "Livre", value: STATUS_COMANDA.LIVRE },
+                      { label: "Aberta", value: STATUS_COMANDA.ABERTA },
+                      { label: "Finalizada", value: STATUS_COMANDA.FINALIZADA },
+                      { label: "Cancelada", value: STATUS_COMANDA.CANCELADA },
                     ]}
                   />
                 </Col>
 
                 <Col xs={24} md={7}>
-                  <Space style={{ width: '100%' }}>
+                  <Space style={{ width: "100%" }}>
                     <Button
                       type="default"
                       size="large"
@@ -1111,46 +1071,57 @@ export default function Comandas() {
 
               <Row gutter={[16, 16]}>
                 {comandasFiltradas.map((comanda) => {
-                  const status = statusConfig[comanda.status] || statusConfig.LIVRE
-                  const selecionada = String(comandaSelecionada?.id) === String(comanda.id)
+                  const status =
+                    statusConfig[comanda.status] || statusConfig.LIVRE;
+                  const selecionada =
+                    String(comandaSelecionada?.id) === String(comanda.id);
 
                   return (
-                    <Col xs={24} sm={12} lg={8} key={`${comanda.mesa}-${comanda.id}`}>
+                    <Col
+                      xs={24}
+                      sm={12}
+                      lg={8}
+                      key={`${comanda.mesa}-${comanda.id}`}
+                    >
                       <Card
                         hoverable
                         onClick={() => selecionarComanda(comanda)}
                         style={{
-                          cursor: 'pointer',
+                          cursor: "pointer",
                           border: selecionada
-                            ? '1px solid #fa541c'
+                            ? "1px solid #fa541c"
                             : `1px solid ${status.borderColor}`,
                           background: status.bg,
                           boxShadow: selecionada
-                            ? '0 0 0 1px rgba(250,84,28,0.15)'
-                            : 'none',
+                            ? "0 0 0 1px rgba(250,84,28,0.15)"
+                            : "none",
                           opacity: comanda.ativo ? 1 : 0.6,
                         }}
                         styles={{ body: { padding: 16 } }}
                       >
                         <div
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "flex-start",
                             marginBottom: 12,
                           }}
                         >
                           <div>
                             <Title
                               level={4}
-                              style={{ color: '#fff', margin: 0, lineHeight: 1.1 }}
+                              style={{
+                                color: "#fff",
+                                margin: 0,
+                                lineHeight: 1.1,
+                              }}
                             >
                               {comanda.mesa}
                             </Title>
-                            <Text style={{ color: '#bfbfbf' }}>
+                            <Text style={{ color: "#bfbfbf" }}>
                               {comanda.rawOrder
                                 ? `Comanda #${String(comanda.rawOrder.id).slice(-6)}`
-                                : 'Sem comanda'}
+                                : "Sem comanda"}
                             </Text>
                           </div>
 
@@ -1159,32 +1130,38 @@ export default function Comandas() {
                           </Tag>
                         </div>
 
-                        <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                          <Text style={{ color: '#d9d9d9' }}>
-                            <strong>Cliente:</strong>{' '}
-                            {comanda.cliente || 'Mesa sem identificação'}
+                        <Space
+                          direction="vertical"
+                          size={6}
+                          style={{ width: "100%" }}
+                        >
+                          <Text style={{ color: "#d9d9d9" }}>
+                            <strong>Cliente:</strong>{" "}
+                            {comanda.cliente || "Mesa sem identificação"}
                           </Text>
 
-                          <Text style={{ color: '#d9d9d9' }}>
-                            <strong>Garçom:</strong> {comanda.garcom || '-'}
+                          <Text style={{ color: "#d9d9d9" }}>
+                            <strong>Garçom:</strong> {comanda.garcom || "-"}
                           </Text>
 
-                          <Text style={{ color: '#d9d9d9' }}>
-                            <strong>Mesa ativa:</strong> {comanda.ativo ? 'Sim' : 'Não'}
+                          <Text style={{ color: "#d9d9d9" }}>
+                            <strong>Mesa ativa:</strong>{" "}
+                            {comanda.ativo ? "Sim" : "Não"}
                           </Text>
 
-                          <Text style={{ color: '#d9d9d9' }}>
-                            <strong>Total:</strong> {formatCurrency(comanda.total)}
+                          <Text style={{ color: "#d9d9d9" }}>
+                            <strong>Total:</strong>{" "}
+                            {formatCurrency(comanda.total)}
                           </Text>
                         </Space>
                       </Card>
                     </Col>
-                  )
+                  );
                 })}
               </Row>
 
               {!comandasFiltradas.length && (
-                <div style={{ padding: '32px 0' }}>
+                <div style={{ padding: "32px 0" }}>
                   <Empty description="Nenhuma comanda encontrada" />
                 </div>
               )}
@@ -1195,14 +1172,14 @@ export default function Comandas() {
             <Card
               bordered={false}
               title={
-                <span style={{ color: '#fff' }}>
+                <span style={{ color: "#fff" }}>
                   {comandaSelecionada
                     ? `${comandaSelecionada.mesa} • ${
                         comandaSelecionada.rawOrder
                           ? `Comanda #${String(comandaSelecionada.rawOrder.id).slice(-6)}`
-                          : 'Sem comanda'
+                          : "Sem comanda"
                       }`
-                    : 'Detalhes da comanda'}
+                    : "Detalhes da comanda"}
                 </span>
               }
             >
@@ -1212,33 +1189,36 @@ export default function Comandas() {
                     size="small"
                     column={1}
                     styles={{
-                      label: { color: '#bfbfbf' },
-                      content: { color: '#f5f5f5' },
+                      label: { color: "#bfbfbf" },
+                      content: { color: "#f5f5f5" },
                     }}
                   >
                     <Descriptions.Item label="Cliente">
-                      {comandaSelecionada.cliente || 'Mesa sem identificação'}
+                      {comandaSelecionada.cliente || "Mesa sem identificação"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Garçom">
                       <Space size={6}>
                         <UserOutlined />
-                        {comandaSelecionada.garcom || '-'}
+                        {comandaSelecionada.garcom || "-"}
                       </Space>
                     </Descriptions.Item>
                     <Descriptions.Item label="Mesa ativa">
-                      {comandaSelecionada.ativo ? 'Sim' : 'Não'}
+                      {comandaSelecionada.ativo ? "Sim" : "Não"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Abertura">
-                      {comandaSelecionada.rawOrder?.openedAt || '-'}
+                      {comandaSelecionada.rawOrder?.openedAt || "-"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Última atualização">
-                      {comandaSelecionada.rawOrder?.updatedAt || '-'}
+                      {comandaSelecionada.rawOrder?.updatedAt || "-"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Status">
                       <Badge
-                        status={statusConfig[comandaSelecionada.status]?.badge || 'default'}
+                        status={
+                          statusConfig[comandaSelecionada.status]?.badge ||
+                          "default"
+                        }
                         text={
-                          <span style={{ color: '#d9d9d9' }}>
+                          <span style={{ color: "#d9d9d9" }}>
                             {statusConfig[comandaSelecionada.status]?.label ||
                               comandaSelecionada.status}
                           </span>
@@ -1249,13 +1229,13 @@ export default function Comandas() {
 
                   {comandaSelecionada.status !== STATUS_COMANDA.LIVRE && (
                     <>
-                      <Divider style={{ borderColor: '#303030' }} />
+                      <Divider style={{ borderColor: "#303030" }} />
 
                       <Text
                         style={{
-                          color: '#fff',
+                          color: "#fff",
                           fontWeight: 600,
-                          display: 'block',
+                          display: "block",
                           marginBottom: 12,
                         }}
                       >
@@ -1264,31 +1244,35 @@ export default function Comandas() {
 
                       <Steps
                         size="small"
-                        current={comandaSelecionada.status === STATUS_COMANDA.ABERTA ? 0 : 2}
+                        current={
+                          comandaSelecionada.status === STATUS_COMANDA.ABERTA
+                            ? 0
+                            : 2
+                        }
                         items={[
-                          { title: 'Aberta' },
-                          { title: 'Itens lançados' },
-                          { title: 'Fechamento' },
+                          { title: "Aberta" },
+                          { title: "Itens lançados" },
+                          { title: "Fechamento" },
                         ]}
                       />
                     </>
                   )}
 
-                  <Divider style={{ borderColor: '#303030' }} />
+                  <Divider style={{ borderColor: "#303030" }} />
 
                   <div
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                       marginBottom: 12,
                     }}
                   >
                     <Text
                       style={{
-                        color: '#fff',
+                        color: "#fff",
                         fontWeight: 600,
-                        display: 'block',
+                        display: "block",
                       }}
                     >
                       Itens da comanda
@@ -1300,30 +1284,52 @@ export default function Comandas() {
                   </div>
 
                   <List
-                    locale={{ emptyText: 'Nenhum item nesta comanda' }}
+                    locale={{ emptyText: "Nenhum item nesta comanda" }}
                     dataSource={comandaSelecionada.itens}
                     renderItem={(item) => {
-                      let statusItemConfig = { color: 'success', label: 'Ativo' }
+                      let statusItemConfig = {
+                        color: "success",
+                        label: "Ativo",
+                      };
 
-                      if (item.status === 'CANCELADO') {
-                        statusItemConfig = { color: 'error', label: 'Cancelado' }
-                      } else if (hasKitchenReadyFlag(item.notes)) {
-                        statusItemConfig = { color: 'success', label: 'Pronto' }
-                      } else if (hasKitchenPreparingFlag(item.notes)) {
-                        statusItemConfig = { color: 'warning', label: 'Em preparo' }
-                      } else if (hasKitchenSentFlag(item.notes)) {
-                        statusItemConfig = { color: 'processing', label: 'Enviado cozinha' }
+                      if (item.status === "CANCELADO") {
+                        statusItemConfig = {
+                          color: "error",
+                          label: "Cancelado",
+                        };
+                      } else if (
+                        String(item.notes || "").includes("[KITCHEN_READY]")
+                      ) {
+                        statusItemConfig = {
+                          color: "success",
+                          label: "Pronto",
+                        };
+                      } else if (
+                        String(item.notes || "").includes("[KITCHEN_PREPARO]")
+                      ) {
+                        statusItemConfig = {
+                          color: "warning",
+                          label: "Em preparo",
+                        };
+                      } else if (
+                        String(item.notes || "").includes("[KITCHEN_SENT]")
+                      ) {
+                        statusItemConfig = {
+                          color: "processing",
+                          label: "Enviado cozinha",
+                        };
                       }
 
                       return (
                         <List.Item
                           style={{
-                            padding: '12px 0',
-                            borderBottom: '1px solid #262626',
+                            padding: "12px 0",
+                            borderBottom: "1px solid #262626",
                           }}
                           actions={
-                            comandaSelecionada.status !== STATUS_COMANDA.LIVRE &&
-                            item.status !== 'CANCELADO'
+                            comandaSelecionada.status !==
+                              STATUS_COMANDA.LIVRE &&
+                            item.status !== "CANCELADO"
                               ? [
                                   <Button
                                     key="edit"
@@ -1346,61 +1352,67 @@ export default function Comandas() {
                               : []
                           }
                         >
-                          <div style={{ width: '100%' }}>
+                          <div style={{ width: "100%" }}>
                             <div
                               style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
+                                display: "flex",
+                                justifyContent: "space-between",
                                 gap: 12,
                                 marginBottom: 4,
                               }}
                             >
-                              <Text style={{ color: '#f5f5f5' }}>
+                              <Text style={{ color: "#f5f5f5" }}>
                                 {item.quantity}x {item.productName}
                               </Text>
-                              <Text style={{ color: '#f5f5f5', fontWeight: 600 }}>
+                              <Text
+                                style={{ color: "#f5f5f5", fontWeight: 600 }}
+                              >
                                 {formatCurrency(item.totalPrice)}
                               </Text>
                             </div>
 
                             <Space wrap size={[6, 6]}>
-                              <Tag color={statusItemConfig.color}>{statusItemConfig.label}</Tag>
+                              <Tag color={statusItemConfig.color}>
+                                {statusItemConfig.label}
+                              </Tag>
                             </Space>
 
                             <div>
-                              <Text style={{ color: '#8c8c8c', fontSize: 12 }}>
+                              <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
                                 Unitário: {formatCurrency(item.unitPrice)}
                               </Text>
                             </div>
 
                             {!!removeKitchenFlags(item.notes) && (
                               <div>
-                                <Text style={{ color: '#8c8c8c', fontSize: 12 }}>
+                                <Text
+                                  style={{ color: "#8c8c8c", fontSize: 12 }}
+                                >
                                   Obs.: {removeKitchenFlags(item.notes)}
                                 </Text>
                               </div>
                             )}
                           </div>
                         </List.Item>
-                      )
+                      );
                     }}
                   />
 
-                  <Divider style={{ borderColor: '#303030' }} />
+                  <Divider style={{ borderColor: "#303030" }} />
 
                   <div
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
+                      display: "flex",
+                      justifyContent: "space-between",
                       marginBottom: 16,
                     }}
                   >
-                    <Text style={{ color: '#bfbfbf', fontSize: 16 }}>
+                    <Text style={{ color: "#bfbfbf", fontSize: 16 }}>
                       Total da comanda
                     </Text>
                     <Text
                       style={{
-                        color: '#fff',
+                        color: "#fff",
                         fontSize: 22,
                         fontWeight: 700,
                       }}
@@ -1409,14 +1421,20 @@ export default function Comandas() {
                     </Text>
                   </div>
 
-                  <Space direction="vertical" style={{ width: '100%' }} size={10}>
+                  <Space
+                    direction="vertical"
+                    style={{ width: "100%" }}
+                    size={10}
+                  >
                     <Button
                       type="primary"
                       icon={<PlusOutlined />}
                       size="large"
                       block
                       onClick={abrirModalAdicionarItem}
-                      disabled={comandaSelecionada.status === STATUS_COMANDA.LIVRE}
+                      disabled={
+                        comandaSelecionada.status === STATUS_COMANDA.LIVRE
+                      }
                     >
                       Adicionar itens
                     </Button>
@@ -1429,7 +1447,9 @@ export default function Comandas() {
                       disabled={
                         comandaSelecionada.status === STATUS_COMANDA.LIVRE ||
                         !(comandaSelecionada.itens || []).some(
-                          (item) => item.status === 'ATIVO' && !hasKitchenSentFlag(item.notes),
+                          (item) =>
+                            item.status === "ATIVO" &&
+                            !hasKitchenSentFlag(item.notes),
                         )
                       }
                     >
@@ -1441,7 +1461,9 @@ export default function Comandas() {
                       block
                       icon={<SwapOutlined />}
                       onClick={abrirTransferencia}
-                      disabled={comandaSelecionada.status === STATUS_COMANDA.LIVRE}
+                      disabled={
+                        comandaSelecionada.status === STATUS_COMANDA.LIVRE
+                      }
                     >
                       Transferir mesa
                     </Button>
@@ -1451,7 +1473,9 @@ export default function Comandas() {
                       block
                       icon={<CheckCircleOutlined />}
                       onClick={abrirDividirConta}
-                      disabled={comandaSelecionada.status === STATUS_COMANDA.LIVRE}
+                      disabled={
+                        comandaSelecionada.status === STATUS_COMANDA.LIVRE
+                      }
                     >
                       Dividir conta
                     </Button>
@@ -1460,8 +1484,10 @@ export default function Comandas() {
                       size="large"
                       block
                       icon={<PrinterOutlined />}
-                      onClick={() => imprimirComanda(comandaSelecionada.rawOrder.id)}
-                      disabled={comandaSelecionada.status === STATUS_COMANDA.LIVRE}
+                      onClick={imprimirComanda}
+                      disabled={
+                        comandaSelecionada.status === STATUS_COMANDA.LIVRE
+                      }
                     >
                       Imprimir comanda
                     </Button>
@@ -1471,7 +1497,9 @@ export default function Comandas() {
                       size="large"
                       block
                       onClick={abrirFechamento}
-                      disabled={comandaSelecionada.status === STATUS_COMANDA.LIVRE}
+                      disabled={
+                        comandaSelecionada.status === STATUS_COMANDA.LIVRE
+                      }
                     >
                       Fechar conta
                     </Button>
@@ -1486,7 +1514,7 @@ export default function Comandas() {
       ),
     },
     {
-      key: 'mesas',
+      key: "mesas",
       label: (
         <span>
           <TableOutlined /> Mesas
@@ -1499,7 +1527,11 @@ export default function Comandas() {
               bordered={false}
               title="Visão geral das mesas"
               extra={
-                <Button type="primary" icon={<PlusOutlined />} onClick={abrirModalNovaMesa}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={abrirModalNovaMesa}
+                >
                   Nova mesa
                 </Button>
               }
@@ -1517,7 +1549,10 @@ export default function Comandas() {
             <Row gutter={[16, 16]}>
               <Col span={24}>
                 <Card bordered={false}>
-                  <Statistic title="Mesas ocupadas" value={mesasOcupadas.length} />
+                  <Statistic
+                    title="Mesas ocupadas"
+                    value={mesasOcupadas.length}
+                  />
                 </Card>
               </Col>
               <Col span={24}>
@@ -1529,7 +1564,7 @@ export default function Comandas() {
                 <Card bordered={false} title="Mesas livres agora">
                   <Space wrap>
                     {mesasLivres.map((mesa) => (
-                      <Tag key={mesa.mesaId} style={{ padding: '6px 10px' }}>
+                      <Tag key={mesa.mesaId} style={{ padding: "6px 10px" }}>
                         {mesa.mesa}
                       </Tag>
                     ))}
@@ -1542,7 +1577,7 @@ export default function Comandas() {
       ),
     },
     {
-      key: 'caixa',
+      key: "caixa",
       label: (
         <span>
           <DollarOutlined /> Caixa
@@ -1550,23 +1585,6 @@ export default function Comandas() {
       ),
       children: (
         <Row gutter={[16, 16]}>
-          <Col span={24}>
-            <Alert
-              type={caixaAtual?.status === 'ABERTO' ? 'success' : 'warning'}
-              showIcon
-              message={
-                caixaAtual?.status === 'ABERTO'
-                  ? `Caixa aberto • Operador: ${caixaAtual.operador || '-'}`
-                  : 'Nenhum caixa aberto no momento'
-              }
-              description={
-                caixaAtual?.status === 'ABERTO'
-                  ? `Abertura: ${caixaAtual.dataAbertura || '-'}`
-                  : 'Abra o caixa antes de fechar comandas.'
-              }
-            />
-          </Col>
-
           <Col xs={24} md={12} xl={6}>
             <Card bordered={false}>
               <Statistic
@@ -1579,7 +1597,12 @@ export default function Comandas() {
           </Col>
           <Col xs={24} md={12} xl={6}>
             <Card bordered={false}>
-              <Statistic title="PIX" value={totaisCaixa.pix} precision={2} prefix="R$" />
+              <Statistic
+                title="PIX"
+                value={totaisCaixa.pix}
+                precision={2}
+                prefix="R$"
+              />
             </Card>
           </Col>
           <Col xs={24} md={12} xl={6}>
@@ -1595,18 +1618,8 @@ export default function Comandas() {
           <Col xs={24} md={12} xl={6}>
             <Card bordered={false}>
               <Statistic
-                title="Débito"
-                value={totaisCaixa.debito}
-                precision={2}
-                prefix="R$"
-              />
-            </Card>
-          </Col>
-          <Col xs={24} md={12} xl={6}>
-            <Card bordered={false}>
-              <Statistic
-                title="Dinheiro"
-                value={totaisCaixa.dinheiro}
+                title="Débito + Dinheiro"
+                value={totaisCaixa.debito + totaisCaixa.dinheiro}
                 precision={2}
                 prefix="R$"
               />
@@ -1627,7 +1640,7 @@ export default function Comandas() {
       ),
     },
     {
-      key: 'historico',
+      key: "historico",
       label: (
         <span>
           <HistoryOutlined /> Histórico
@@ -1644,7 +1657,7 @@ export default function Comandas() {
         </Card>
       ),
     },
-  ]
+  ];
 
   if (loadingPage) {
     return (
@@ -1657,16 +1670,16 @@ export default function Comandas() {
           <div
             style={{
               minHeight: 300,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <Spin size="large" />
           </div>
         </Card>
       </>
-    )
+    );
   }
 
   return (
@@ -1719,9 +1732,9 @@ export default function Comandas() {
           <Form.Item
             label="Número da mesa"
             name="numero"
-            rules={[{ required: true, message: 'Informe o número da mesa' }]}
+            rules={[{ required: true, message: "Informe o número da mesa" }]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Nome da mesa" name="nome">
@@ -1734,8 +1747,8 @@ export default function Comandas() {
         title="Editar mesa"
         open={modalEditarMesaOpen}
         onCancel={() => {
-          setModalEditarMesaOpen(false)
-          setMesaEditando(null)
+          setModalEditarMesaOpen(false);
+          setMesaEditando(null);
         }}
         onOk={salvarEdicaoMesa}
         okText="Salvar alterações"
@@ -1746,9 +1759,9 @@ export default function Comandas() {
           <Form.Item
             label="Número da mesa"
             name="numero"
-            rules={[{ required: true, message: 'Informe o número da mesa' }]}
+            rules={[{ required: true, message: "Informe o número da mesa" }]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Nome da mesa" name="nome">
@@ -1758,14 +1771,14 @@ export default function Comandas() {
           <Form.Item
             label="Status físico da mesa"
             name="status"
-            rules={[{ required: true, message: 'Selecione o status' }]}
+            rules={[{ required: true, message: "Selecione o status" }]}
           >
             <Select
               options={[
-                { label: 'Livre', value: 'LIVRE' },
-                { label: 'Ocupada', value: 'OCUPADA' },
-                { label: 'Reservada', value: 'RESERVADA' },
-                { label: 'Inativa', value: 'INATIVA' },
+                { label: "Livre", value: "LIVRE" },
+                { label: "Ocupada", value: "OCUPADA" },
+                { label: "Reservada", value: "RESERVADA" },
+                { label: "Inativa", value: "INATIVA" },
               ]}
             />
           </Form.Item>
@@ -1785,7 +1798,7 @@ export default function Comandas() {
           <Form.Item
             label="Mesa"
             name="mesa"
-            rules={[{ required: true, message: 'Selecione a mesa' }]}
+            rules={[{ required: true, message: "Selecione a mesa" }]}
           >
             <Select
               placeholder="Selecione a mesa"
@@ -1803,7 +1816,7 @@ export default function Comandas() {
           <Form.Item
             label="Garçom responsável"
             name="garcom"
-            rules={[{ required: true, message: 'Informe o garçom' }]}
+            rules={[{ required: true, message: "Informe o garçom" }]}
           >
             <Input placeholder="Ex.: João" />
           </Form.Item>
@@ -1811,12 +1824,12 @@ export default function Comandas() {
           <Form.Item
             label="Tipo de atendimento"
             name="tipoAtendimento"
-            rules={[{ required: true, message: 'Selecione o tipo' }]}
+            rules={[{ required: true, message: "Selecione o tipo" }]}
           >
             <Select
               options={[
-                { label: 'Salão', value: 'salao' },
-                { label: 'Balcão', value: 'balcao' },
+                { label: "Salão", value: "salao" },
+                { label: "Balcão", value: "balcao" },
               ]}
             />
           </Form.Item>
@@ -1824,9 +1837,11 @@ export default function Comandas() {
           <Form.Item
             label="Número de pessoas"
             name="pessoas"
-            rules={[{ required: true, message: 'Informe a quantidade de pessoas' }]}
+            rules={[
+              { required: true, message: "Informe a quantidade de pessoas" },
+            ]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Observação" name="observacao">
@@ -1848,7 +1863,7 @@ export default function Comandas() {
           <Form.Item
             label="Categoria"
             name="categoria"
-            rules={[{ required: true, message: 'Selecione a categoria' }]}
+            rules={[{ required: true, message: "Selecione a categoria" }]}
           >
             <Select
               placeholder="Selecione a categoria"
@@ -1859,23 +1874,26 @@ export default function Comandas() {
               onChange={() => {
                 formAdicionarItem.setFieldsValue({
                   produtoId: undefined,
-                })
+                });
               }}
             />
           </Form.Item>
 
-          <Form.Item shouldUpdate={(prev, curr) => prev.categoria !== curr.categoria} noStyle>
+          <Form.Item
+            shouldUpdate={(prev, curr) => prev.categoria !== curr.categoria}
+            noStyle
+          >
             {({ getFieldValue }) => {
-              const categoria = getFieldValue('categoria')
+              const categoria = getFieldValue("categoria");
               const produtosDaCategoria = categoria
                 ? produtosPorCategoria[categoria] || []
-                : []
+                : [];
 
               return (
                 <Form.Item
                   label="Produto"
                   name="produtoId"
-                  rules={[{ required: true, message: 'Selecione o produto' }]}
+                  rules={[{ required: true, message: "Selecione o produto" }]}
                 >
                   <Select
                     placeholder="Selecione o produto"
@@ -1885,16 +1903,16 @@ export default function Comandas() {
                     }))}
                   />
                 </Form.Item>
-              )
+              );
             }}
           </Form.Item>
 
           <Form.Item
             label="Quantidade"
             name="qtd"
-            rules={[{ required: true, message: 'Informe a quantidade' }]}
+            rules={[{ required: true, message: "Informe a quantidade" }]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Observação" name="observacao">
@@ -1919,8 +1937,8 @@ export default function Comandas() {
         title="Editar item"
         open={modalEditarItemOpen}
         onCancel={() => {
-          setModalEditarItemOpen(false)
-          setItemEditando(null)
+          setModalEditarItemOpen(false);
+          setItemEditando(null);
         }}
         onOk={salvarEdicaoItem}
         okText="Salvar alterações"
@@ -1931,7 +1949,7 @@ export default function Comandas() {
           <Form.Item
             label="Categoria"
             name="categoria"
-            rules={[{ required: true, message: 'Selecione a categoria' }]}
+            rules={[{ required: true, message: "Selecione a categoria" }]}
           >
             <Select
               placeholder="Selecione a categoria"
@@ -1942,23 +1960,26 @@ export default function Comandas() {
               onChange={() => {
                 formEditarItem.setFieldsValue({
                   produtoId: undefined,
-                })
+                });
               }}
             />
           </Form.Item>
 
-          <Form.Item shouldUpdate={(prev, curr) => prev.categoria !== curr.categoria} noStyle>
+          <Form.Item
+            shouldUpdate={(prev, curr) => prev.categoria !== curr.categoria}
+            noStyle
+          >
             {({ getFieldValue }) => {
-              const categoria = getFieldValue('categoria')
+              const categoria = getFieldValue("categoria");
               const produtosDaCategoria = categoria
                 ? produtosPorCategoria[categoria] || []
-                : []
+                : [];
 
               return (
                 <Form.Item
                   label="Produto"
                   name="produtoId"
-                  rules={[{ required: true, message: 'Selecione o produto' }]}
+                  rules={[{ required: true, message: "Selecione o produto" }]}
                 >
                   <Select
                     placeholder="Selecione o produto"
@@ -1968,16 +1989,16 @@ export default function Comandas() {
                     }))}
                   />
                 </Form.Item>
-              )
+              );
             }}
           </Form.Item>
 
           <Form.Item
             label="Quantidade"
             name="qtd"
-            rules={[{ required: true, message: 'Informe a quantidade' }]}
+            rules={[{ required: true, message: "Informe a quantidade" }]}
           >
-            <InputNumber min={1} style={{ width: '100%' }} />
+            <InputNumber min={1} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item label="Observação" name="observacao">
@@ -2015,7 +2036,7 @@ export default function Comandas() {
           <Form.Item
             label="Nova mesa"
             name="novaMesa"
-            rules={[{ required: true, message: 'Selecione a nova mesa' }]}
+            rules={[{ required: true, message: "Selecione a nova mesa" }]}
           >
             <Select
               placeholder="Selecione a mesa de destino"
@@ -2040,41 +2061,47 @@ export default function Comandas() {
           <Form.Item
             label="Dividir em quantas pessoas"
             name="qtdPessoas"
-            rules={[{ required: true, message: 'Informe a quantidade' }]}
+            rules={[{ required: true, message: "Informe a quantidade" }]}
           >
-            <InputNumber min={1} max={20} style={{ width: '100%' }} />
+            <InputNumber min={1} max={20} style={{ width: "100%" }} />
           </Form.Item>
         </Form>
 
         <Card
           size="small"
           style={{
-            background: '#141414',
-            border: '1px solid #262626',
+            background: "#141414",
+            border: "1px solid #262626",
           }}
         >
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#bfbfbf' }}>Total da comanda</Text>
-              <Text style={{ color: '#fff' }}>{formatCurrency(totalSelecionado)}</Text>
+          <Space direction="vertical" style={{ width: "100%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <Text style={{ color: "#bfbfbf" }}>Total da comanda</Text>
+              <Text style={{ color: "#fff" }}>
+                {formatCurrency(totalSelecionado)}
+              </Text>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#bfbfbf' }}>Divisão</Text>
-              <Text style={{ color: '#fff' }}>{qtdDivisaoAtual}x</Text>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <Text style={{ color: "#bfbfbf" }}>Divisão</Text>
+              <Text style={{ color: "#fff" }}>{qtdDivisaoAtual}x</Text>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Text style={{ color: '#bfbfbf' }}>Valor por pessoa</Text>
-              <Text style={{ color: '#fff', fontWeight: 700 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <Text style={{ color: "#bfbfbf" }}>Valor por pessoa</Text>
+              <Text style={{ color: "#fff", fontWeight: 700 }}>
                 {formatCurrency(valorDivisaoConta)}
               </Text>
             </div>
           </Space>
         </Card>
 
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button onClick={() => setModalDividirContaOpen(false)}>Fechar</Button>
+        <div
+          style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}
+        >
+          <Button onClick={() => setModalDividirContaOpen(false)}>
+            Fechar
+          </Button>
         </div>
       </Modal>
 
@@ -2090,7 +2117,11 @@ export default function Comandas() {
         <Form form={formFechamento} layout="vertical">
           <Form.Item label="Total da comanda">
             <Input
-              value={comandaSelecionada ? formatCurrency(comandaSelecionada.total) : ''}
+              value={
+                comandaSelecionada
+                  ? formatCurrency(comandaSelecionada.total)
+                  : ""
+              }
               disabled
             />
           </Form.Item>
@@ -2098,44 +2129,48 @@ export default function Comandas() {
           <Form.Item
             label="Forma de pagamento"
             name="pagamento"
-            rules={[{ required: true, message: 'Selecione a forma de pagamento' }]}
+            rules={[
+              { required: true, message: "Selecione a forma de pagamento" },
+            ]}
           >
             <Select
               options={[
-                { label: 'PIX', value: 'PIX' },
-                { label: 'Cartão de crédito', value: 'CREDITO' },
-                { label: 'Cartão de débito', value: 'DEBITO' },
-                { label: 'Dinheiro', value: 'DINHEIRO' },
+                { label: "PIX", value: "PIX" },
+                { label: "Cartão de crédito", value: "Cartão de crédito" },
+                { label: "Cartão de débito", value: "Cartão de débito" },
+                { label: "Dinheiro", value: "Dinheiro" },
               ]}
             />
           </Form.Item>
 
           <Form.Item label="Dividir em quantas partes" name="divisao">
-            <InputNumber min={1} max={20} style={{ width: '100%' }} />
+            <InputNumber min={1} max={20} style={{ width: "100%" }} />
           </Form.Item>
 
           <Card
             size="small"
             style={{
-              background: '#141414',
-              border: '1px solid #262626',
+              background: "#141414",
+              border: "1px solid #262626",
               marginBottom: 16,
             }}
           >
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Text style={{ color: '#bfbfbf' }}>Total</Text>
-                <Text style={{ color: '#fff' }}>{formatCurrency(totalSelecionado)}</Text>
+            <Space direction="vertical" style={{ width: "100%" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <Text style={{ color: "#bfbfbf" }}>Total</Text>
+                <Text style={{ color: "#fff" }}>
+                  {formatCurrency(totalSelecionado)}
+                </Text>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Text style={{ color: '#bfbfbf' }}>Divisão</Text>
-                <Text style={{ color: '#fff' }}>{divisaoAtual}x</Text>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <Text style={{ color: "#bfbfbf" }}>Divisão</Text>
+                <Text style={{ color: "#fff" }}>{divisaoAtual}x</Text>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Text style={{ color: '#bfbfbf' }}>Valor por parte</Text>
-                <Text style={{ color: '#fff', fontWeight: 700 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <Text style={{ color: "#bfbfbf" }}>Valor por parte</Text>
+                <Text style={{ color: "#fff", fontWeight: 700 }}>
                   {formatCurrency(totalPorPessoa)}
                 </Text>
               </div>
@@ -2145,17 +2180,17 @@ export default function Comandas() {
           <Form.Item
             label="Valor recebido"
             name="valorRecebido"
-            rules={[{ required: true, message: 'Informe o valor recebido' }]}
+            rules={[{ required: true, message: "Informe o valor recebido" }]}
           >
             <InputNumber
               min={0}
               precision={2}
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               addonBefore={<WalletOutlined />}
             />
           </Form.Item>
 
-          {pagamentoFechamento === 'DINHEIRO' && (
+          {pagamentoFechamento === "Dinheiro" && (
             <>
               {Number(valorRecebidoFechamento || 0) < totalSelecionado ? (
                 <Alert
@@ -2177,5 +2212,5 @@ export default function Comandas() {
         </Form>
       </Modal>
     </>
-  )
+  );
 }
