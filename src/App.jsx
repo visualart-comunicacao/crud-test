@@ -1,7 +1,13 @@
+import ResponsiveRedirect from './components/ResponsiveRedirect'
 import RoutesApp from './routes'
 
 function App() {
-  return <RoutesApp />
+  return (
+    <>
+      <ResponsiveRedirect />
+      <RoutesApp />
+    </>
+  )
 }
 
 export default App
