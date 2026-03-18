@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ConfigProvider, theme as antdTheme } from 'antd'
 import ptBR from 'antd/locale/pt_BR'
 import App from './App'
+import { AuthProvider } from '@/contexts/AuthContext'
 import './styles/global.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -39,7 +40,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       }}
     >
       <BrowserRouter>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </BrowserRouter>
     </ConfigProvider>
   </React.StrictMode>

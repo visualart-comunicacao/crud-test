@@ -1,10 +1,25 @@
 import { Layout, Space, Input, Badge, Avatar, Typography } from 'antd'
 import { BellOutlined, UserOutlined } from '@ant-design/icons'
+import { useAuth } from '@/contexts/AuthContext'
 
 const { Header } = Layout
 const { Text } = Typography
 
+function formatRole(role) {
+  const map = {
+    ADMIN: 'Administrador',
+    CAIXA: 'Caixa',
+    GARCOM: 'Garçom',
+    ATENDENTE: 'Atendente',
+  }
+
+  return map[role] || role || ''
+}
+
 export default function AppHeader() {
+  const auth = useAuth()
+  const user = auth?.user
+
   return (
     <Header
       style={{
@@ -31,7 +46,14 @@ export default function AppHeader() {
 
         <Space>
           <Avatar icon={<UserOutlined />} />
-          <Text style={{ color: '#fff' }}>Administrador</Text>
+          <Space direction="vertical" size={0}>
+            <Text style={{ color: '#fff', lineHeight: 1 }}>
+              {user?.name || 'Usuário'}
+            </Text>
+            <Text style={{ color: '#aaa', fontSize: 12, lineHeight: 1 }}>
+              {formatRole(user?.role)}
+            </Text>
+          </Space>
         </Space>
       </Space>
     </Header>

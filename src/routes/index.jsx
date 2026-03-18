@@ -11,6 +11,7 @@ import Cozinha from '../pages/Cozinha'
 import Delivery from '../pages/Delivery'
 import Produtos from '../pages/Produtos'
 import Configuracoes from '../pages/Configuracoes'
+import PrivateRoute from './PrivateRoute'
 
 function ComandasRedirect() {
   const screens = Grid.useBreakpoint()
@@ -28,23 +29,23 @@ export default function RoutesApp() {
     <Routes>
       <Route path="/login" element={<Login />} />
 
-      {/* rota inteligente */}
-      <Route path="/comandas" element={<ComandasRedirect />} />
+      <Route element={<PrivateRoute />}>
+        <Route path="/comandas" element={<ComandasRedirect />} />
+        <Route path="/comandas-mobile" element={<ComandasMobile />} />
 
-      {/* mobile fora do layout */}
-      <Route path="/comandas-mobile" element={<ComandasMobile />} />
-
-      {/* desktop com layout */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Navigate to="/login" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="caixa" element={<Caixa />} />
-        <Route path="comandas-desktop" element={<Comandas />} />
-        <Route path="cozinha" element={<Cozinha />} />
-        <Route path="delivery" element={<Delivery />} />
-        <Route path="produtos" element={<Produtos />} />
-        <Route path="configuracoes" element={<Configuracoes />} />
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="caixa" element={<Caixa />} />
+          <Route path="comandas-desktop" element={<Comandas />} />
+          <Route path="cozinha" element={<Cozinha />} />
+          <Route path="delivery" element={<Delivery />} />
+          <Route path="produtos" element={<Produtos />} />
+          <Route path="configuracoes" element={<Configuracoes />} />
+        </Route>
       </Route>
+
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }
