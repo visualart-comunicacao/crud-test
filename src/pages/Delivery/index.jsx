@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Row,
   Col,
@@ -23,6 +23,8 @@ import {
   Modal,
   Popconfirm,
   List,
+  Spin,
+  Alert,
 } from 'antd'
 import {
   SearchOutlined,
@@ -42,6 +44,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons'
 import PageTitle from '../../components/common/PageTitle'
+import http from '@/api/http'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -58,146 +61,11 @@ const TIPO_ENTREGA = {
   RETIRADA: 'retirada',
 }
 
-const produtosMock = [
-  { id: 1, categoria: 'Espetos', nome: 'Espeto de Carne', preco: 12 },
-  { id: 2, categoria: 'Espetos', nome: 'Espeto de Frango', preco: 11 },
-  { id: 3, categoria: 'Espetos', nome: 'Espeto Medalhão', preco: 15 },
-  { id: 4, categoria: 'Porções', nome: 'Porção de Fritas', preco: 18.9 },
-  { id: 5, categoria: 'Porções', nome: 'Linguiça Acebolada', preco: 22 },
-  { id: 6, categoria: 'Bebidas', nome: 'Coca-Cola 600ml', preco: 7.5 },
-  { id: 7, categoria: 'Bebidas', nome: 'Coca-Cola 2L', preco: 14 },
-  { id: 8, categoria: 'Bebidas', nome: 'Suco Natural', preco: 9 },
-  { id: 9, categoria: 'Acompanhamentos', nome: 'Farofa Especial', preco: 12 },
-  { id: 10, categoria: 'Acompanhamentos', nome: 'Vinagrete', preco: 5 },
-  { id: 11, categoria: 'Entradas', nome: 'Pão de Alho', preco: 8.5 },
-]
-
-const clientesIniciais = [
-  {
-    id: 1,
-    nome: 'Mariana Souza',
-    telefone: '(16) 99999-1001',
-    endereco: 'Rua 7 de Setembro, 245 - Centro',
-    bairro: 'Centro',
-    referencia: 'Casa com portão branco',
-  },
-  {
-    id: 2,
-    nome: 'Ricardo Lima',
-    telefone: '(16) 99999-2002',
-    endereco: 'Av. Paulo Roberto, 110',
-    bairro: 'Jardim Buscardi',
-    referencia: 'Próximo à padaria',
-  },
-  {
-    id: 3,
-    nome: 'Paula Gomes',
-    telefone: '(16) 99999-3003',
-    endereco: 'Rua Marechal Deodoro, 88',
-    bairro: 'Vale do Sol',
-    referencia: '',
-  },
-]
-
-const entregadoresIniciais = [
-  { id: 1, nome: 'André', telefone: '(16) 99999-9001', status: 'em_rota' },
-  { id: 2, nome: 'Carlos', telefone: '(16) 99999-9002', status: 'disponivel' },
-  { id: 3, nome: 'Mateus', telefone: '(16) 99999-9003', status: 'disponivel' },
-]
-
-const pedidosIniciais = [
-  {
-    id: 3001,
-    clienteId: 1,
-    cliente: 'Mariana Souza',
-    telefone: '(16) 99999-1001',
-    endereco: 'Rua 7 de Setembro, 245 - Centro',
-    bairro: 'Centro',
-    referencia: 'Casa com portão branco',
-    origem: TIPO_ENTREGA.DELIVERY,
-    status: STATUS_DELIVERY.RECEBIDO,
-    prioridade: 'normal',
-    pagamento: 'PIX',
-    valorTotal: 74.5,
-    trocoPara: 0,
-    entregador: '',
-    canal: 'WhatsApp',
-    horarioCriacao: '19:05',
-    previsaoEntrega: '19:45',
-    tempoMin: 8,
-    observacao: 'Sem cebola e tocar campainha',
-    itens: [
-      { id: 1, produtoId: 1, nome: 'Espeto de Carne', qtd: 3, valor: 12 },
-      { id: 2, produtoId: 7, nome: 'Coca-Cola 2L', qtd: 1, valor: 14 },
-      { id: 3, produtoId: 9, nome: 'Farofa Especial', qtd: 2, valor: 12 },
-    ],
-  },
-  {
-    id: 3002,
-    clienteId: 2,
-    cliente: 'Ricardo Lima',
-    telefone: '(16) 99999-2002',
-    endereco: 'Av. Paulo Roberto, 110',
-    bairro: 'Jardim Buscardi',
-    referencia: 'Próximo à padaria',
-    origem: TIPO_ENTREGA.DELIVERY,
-    status: STATUS_DELIVERY.PREPARANDO,
-    prioridade: 'alta',
-    pagamento: 'Dinheiro',
-    valorTotal: 98,
-    trocoPara: 120,
-    entregador: '',
-    canal: 'iFood',
-    horarioCriacao: '19:00',
-    previsaoEntrega: '19:40',
-    tempoMin: 18,
-    observacao: 'Cliente pediu pressa',
-    itens: [
-      { id: 1, produtoId: 5, nome: 'Linguiça Acebolada', qtd: 2, valor: 22 },
-      { id: 2, produtoId: 2, nome: 'Espeto de Frango', qtd: 4, valor: 11 },
-      { id: 3, produtoId: 10, nome: 'Vinagrete', qtd: 2, valor: 5 },
-    ],
-  },
-  {
-    id: 3003,
-    clienteId: 3,
-    cliente: 'Paula Gomes',
-    telefone: '(16) 99999-3003',
-    endereco: 'Rua Marechal Deodoro, 88',
-    bairro: 'Vale do Sol',
-    referencia: '',
-    origem: TIPO_ENTREGA.DELIVERY,
-    status: STATUS_DELIVERY.ROTA,
-    prioridade: 'normal',
-    pagamento: 'Cartão de crédito',
-    valorTotal: 61.9,
-    trocoPara: 0,
-    entregador: 'André',
-    canal: 'Telefone',
-    horarioCriacao: '18:55',
-    previsaoEntrega: '19:35',
-    tempoMin: 24,
-    observacao: '',
-    itens: [
-      { id: 1, produtoId: 3, nome: 'Espeto Medalhão', qtd: 2, valor: 15 },
-      { id: 2, produtoId: 11, nome: 'Pão de Alho', qtd: 2, valor: 8.5 },
-      { id: 3, produtoId: 6, nome: 'Coca-Cola 600ml', qtd: 2, valor: 7.5 },
-    ],
-  },
-]
-
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   })
-}
-
-function gerarHorarioAtual() {
-  const agora = new Date()
-  const horas = String(agora.getHours()).padStart(2, '0')
-  const minutos = String(agora.getMinutes()).padStart(2, '0')
-  return `${horas}:${minutos}`
 }
 
 function somarItens(itens) {
@@ -237,10 +105,51 @@ function getOrigemLabel(origem) {
   return origem === TIPO_ENTREGA.RETIRADA ? 'Retirada' : 'Delivery'
 }
 
+function normalizeList(data) {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.items)) return data.items
+  if (Array.isArray(data?.data)) return data.data
+  if (Array.isArray(data?.rows)) return data.rows
+  return []
+}
+
+function normalizeResumo(data) {
+  return {
+    total: Number(data?.total || 0),
+    recebidos: Number(data?.recebidos || 0),
+    preparando: Number(data?.preparando || 0),
+    rota: Number(data?.rota || 0),
+    entregues: Number(data?.entregues || 0),
+    atrasados: Number(data?.atrasados || 0),
+    delivery: Number(data?.delivery || 0),
+    retirada: Number(data?.retirada || 0),
+  }
+}
+
 export default function Delivery() {
-  const [pedidos, setPedidos] = useState(pedidosIniciais)
-  const [clientes, setClientes] = useState(clientesIniciais)
-  const [entregadores, setEntregadores] = useState(entregadoresIniciais)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  const [pedidos, setPedidos] = useState([])
+  const [clientes, setClientes] = useState([])
+  const [entregadores, setEntregadores] = useState([])
+  const [produtos, setProdutos] = useState([])
+  const [resumo, setResumo] = useState({
+    total: 0,
+    recebidos: 0,
+    preparando: 0,
+    rota: 0,
+    entregues: 0,
+    atrasados: 0,
+    delivery: 0,
+    retirada: 0,
+  })
+
+  const [erroProdutos, setErroProdutos] = useState('')
+  const [erroPedidos, setErroPedidos] = useState('')
+  const [erroClientes, setErroClientes] = useState('')
+  const [erroEntregadores, setErroEntregadores] = useState('')
+  const [erroResumo, setErroResumo] = useState('')
 
   const [tabAtiva, setTabAtiva] = useState('pedidos')
   const [busca, setBusca] = useState('')
@@ -258,7 +167,6 @@ export default function Delivery() {
   const [modalClienteOpen, setModalClienteOpen] = useState(false)
   const [modalEntregadorOpen, setModalEntregadorOpen] = useState(false)
 
-  const [clienteSelecionadoId, setClienteSelecionadoId] = useState(null)
   const [produtoSelecionadoId, setProdutoSelecionadoId] = useState(null)
   const [quantidadeProduto, setQuantidadeProduto] = useState(1)
 
@@ -266,12 +174,99 @@ export default function Delivery() {
   const pagamentoPedido = Form.useWatch('pagamento', formPedido)
   const trocoParaPedido = Form.useWatch('trocoPara', formPedido)
 
+  async function carregarTudo() {
+    try {
+      setLoading(true)
+
+      setErroProdutos('')
+      setErroPedidos('')
+      setErroClientes('')
+      setErroEntregadores('')
+      setErroResumo('')
+
+      const resultados = await Promise.allSettled([
+        http.get('/delivery/orders'),
+        http.get('/customers'),
+        http.get('/drivers'),
+        http.get('/delivery/dashboard'),
+        http.get('/products'),
+      ])
+
+      const [pedidosRes, clientesRes, entregadoresRes, resumoRes, produtosRes] = resultados
+
+      if (pedidosRes.status === 'fulfilled') {
+        setPedidos(normalizeList(pedidosRes.value.data))
+      } else {
+        console.error('Erro pedidos:', pedidosRes.reason)
+        setPedidos([])
+        setErroPedidos(
+          pedidosRes.reason?.response?.data?.message || 'Erro ao carregar pedidos'
+        )
+      }
+
+      if (clientesRes.status === 'fulfilled') {
+        setClientes(normalizeList(clientesRes.value.data))
+      } else {
+        console.error('Erro clientes:', clientesRes.reason)
+        setClientes([])
+        setErroClientes(
+          clientesRes.reason?.response?.data?.message || 'Erro ao carregar clientes'
+        )
+      }
+
+      if (entregadoresRes.status === 'fulfilled') {
+        setEntregadores(normalizeList(entregadoresRes.value.data))
+      } else {
+        console.error('Erro entregadores:', entregadoresRes.reason)
+        setEntregadores([])
+        setErroEntregadores(
+          entregadoresRes.reason?.response?.data?.message || 'Erro ao carregar entregadores'
+        )
+      }
+
+      if (resumoRes.status === 'fulfilled') {
+        setResumo(normalizeResumo(resumoRes.value.data))
+      } else {
+        console.error('Erro resumo:', resumoRes.reason)
+        setResumo(normalizeResumo({}))
+        setErroResumo(
+          resumoRes.reason?.response?.data?.message || 'Erro ao carregar resumo'
+        )
+      }
+
+      if (produtosRes.status === 'fulfilled') {
+        const listaProdutos = normalizeList(produtosRes.value.data)
+        setProdutos(listaProdutos)
+      } else {
+        console.error('Erro produtos:', produtosRes.reason)
+        setProdutos([])
+        setErroProdutos(
+          produtosRes.reason?.response?.data?.message || 'Erro ao carregar produtos'
+        )
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    carregarTudo()
+  }, [])
+
   const clientesMaisRecentes = useMemo(() => clientes.slice().reverse(), [clientes])
 
   const entregadoresDisponiveis = useMemo(
     () => entregadores.filter((item) => item.status === 'disponivel'),
     [entregadores]
   )
+
+  const produtosDelivery = useMemo(() => {
+    return produtos.filter((item) => {
+      const ativo = item.ativo !== false
+      const disponivelDelivery = item.disponivelDelivery !== false
+      return ativo && disponivelDelivery
+    })
+  }, [produtos])
 
   const totalNovoPedido = useMemo(() => somarItens(itensNovoPedido), [itensNovoPedido])
 
@@ -285,26 +280,23 @@ export default function Delivery() {
       const texto = busca.toLowerCase()
 
       const matchBusca =
-        String(pedido.id).includes(texto) ||
-        pedido.cliente.toLowerCase().includes(texto) ||
-        pedido.telefone.toLowerCase().includes(texto) ||
-        pedido.endereco.toLowerCase().includes(texto) ||
-        pedido.bairro.toLowerCase().includes(texto) ||
-        pedido.canal.toLowerCase().includes(texto) ||
-        (pedido.entregador || '').toLowerCase().includes(texto) ||
-        pedido.itens.some((item) => item.nome.toLowerCase().includes(texto))
+        String(pedido.id || '').toLowerCase().includes(texto) ||
+        String(pedido.cliente || '').toLowerCase().includes(texto) ||
+        String(pedido.telefone || '').toLowerCase().includes(texto) ||
+        String(pedido.endereco || '').toLowerCase().includes(texto) ||
+        String(pedido.bairro || '').toLowerCase().includes(texto) ||
+        String(pedido.canal || '').toLowerCase().includes(texto) ||
+        String(pedido.entregador || '').toLowerCase().includes(texto) ||
+        (pedido.itens || []).some((item) =>
+          String(item.nome || '').toLowerCase().includes(texto)
+        )
 
       const matchPrioridade =
-        filtroPrioridade === 'todas'
-          ? true
-          : pedido.prioridade === filtroPrioridade
+        filtroPrioridade === 'todas' ? true : pedido.prioridade === filtroPrioridade
 
-      const matchOrigem =
-        filtroOrigem === 'todas' ? true : pedido.origem === filtroOrigem
-
-      const matchAtrasado = mostrarApenasAtrasados ? pedido.tempoMin >= 25 : true
-      const matchEntregues =
-        mostrarEntregues ? true : pedido.status !== STATUS_DELIVERY.ENTREGUE
+      const matchOrigem = filtroOrigem === 'todas' ? true : pedido.origem === filtroOrigem
+      const matchAtrasado = mostrarApenasAtrasados ? Number(pedido.tempoMin || 0) >= 25 : true
+      const matchEntregues = mostrarEntregues ? true : pedido.status !== STATUS_DELIVERY.ENTREGUE
 
       return (
         matchBusca &&
@@ -329,8 +321,7 @@ export default function Delivery() {
   )
 
   const pedidosPreparando = useMemo(
-    () =>
-      pedidosFiltrados.filter((item) => item.status === STATUS_DELIVERY.PREPARANDO),
+    () => pedidosFiltrados.filter((item) => item.status === STATUS_DELIVERY.PREPARANDO),
     [pedidosFiltrados]
   )
 
@@ -344,104 +335,8 @@ export default function Delivery() {
     [pedidosFiltrados]
   )
 
-  const resumo = useMemo(() => {
-    return {
-      total: pedidos.length,
-      recebidos: pedidos.filter((item) => item.status === STATUS_DELIVERY.RECEBIDO)
-        .length,
-      preparando: pedidos.filter(
-        (item) => item.status === STATUS_DELIVERY.PREPARANDO
-      ).length,
-      rota: pedidos.filter((item) => item.status === STATUS_DELIVERY.ROTA).length,
-      entregues: pedidos.filter((item) => item.status === STATUS_DELIVERY.ENTREGUE)
-        .length,
-      atrasados: pedidos.filter((item) => item.tempoMin >= 25).length,
-      delivery: pedidos.filter((item) => item.origem === TIPO_ENTREGA.DELIVERY).length,
-      retirada: pedidos.filter((item) => item.origem === TIPO_ENTREGA.RETIRADA).length,
-    }
-  }, [pedidos])
-
-  const atualizarStatus = (pedidoId, novoStatus) => {
-    setPedidos((prev) =>
-      prev.map((item) =>
-        item.id === pedidoId
-          ? {
-              ...item,
-              status: novoStatus,
-            }
-          : item
-      )
-    )
-  }
-
-  const iniciarPreparo = (pedidoId) => {
-    atualizarStatus(pedidoId, STATUS_DELIVERY.PREPARANDO)
-    message.success('Pedido movido para preparando')
-  }
-
-  const despacharPedido = (pedidoId) => {
-    setPedidos((prev) =>
-      prev.map((item) => {
-        if (item.id !== pedidoId) return item
-
-        const entregadorPadrao =
-          item.origem === TIPO_ENTREGA.DELIVERY
-            ? entregadoresDisponiveis[0]?.nome || 'Motoboy 01'
-            : ''
-
-        return {
-          ...item,
-          status: STATUS_DELIVERY.ROTA,
-          entregador: item.entregador || entregadorPadrao,
-        }
-      })
-    )
-    message.success('Pedido despachado')
-  }
-
-  const marcarEntregue = (pedidoId) => {
-    atualizarStatus(pedidoId, STATUS_DELIVERY.ENTREGUE)
-    message.success('Pedido marcado como entregue')
-  }
-
-  const voltarEtapa = (pedido) => {
-    if (pedido.status === STATUS_DELIVERY.ENTREGUE) {
-      atualizarStatus(pedido.id, STATUS_DELIVERY.ROTA)
-      message.success('Pedido voltou para em rota')
-      return
-    }
-
-    if (pedido.status === STATUS_DELIVERY.ROTA) {
-      atualizarStatus(pedido.id, STATUS_DELIVERY.PREPARANDO)
-      message.success('Pedido voltou para preparando')
-      return
-    }
-
-    if (pedido.status === STATUS_DELIVERY.PREPARANDO) {
-      atualizarStatus(pedido.id, STATUS_DELIVERY.RECEBIDO)
-      message.success('Pedido voltou para recebido')
-      return
-    }
-
-    message.info('Esse pedido já está na primeira etapa')
-  }
-
-  const chamarEntregador = (pedido) => {
-    message.info(
-      pedido.origem === TIPO_ENTREGA.RETIRADA
-        ? `Aviso de retirada do pedido #${pedido.id}`
-        : `Entregador chamado para o pedido #${pedido.id}`
-    )
-  }
-
-  const tocarAlerta = () => {
-    message.info(somAtivo ? 'Alerta sonoro simulado' : 'O som está desativado')
-  }
-
-  const selecionarCliente = (clienteId) => {
+  function selecionarCliente(clienteId) {
     const cliente = clientes.find((item) => item.id === clienteId)
-    setClienteSelecionadoId(clienteId)
-
     if (!cliente) return
 
     formPedido.setFieldsValue({
@@ -454,8 +349,14 @@ export default function Delivery() {
     })
   }
 
-  const adicionarItemPedido = () => {
-    const produto = produtosMock.find((p) => p.id === produtoSelecionadoId)
+  function limparClienteSelecionado() {
+    formPedido.setFieldsValue({
+      clienteId: undefined,
+    })
+  }
+
+  function adicionarItemPedido() {
+    const produto = produtosDelivery.find((p) => p.id === produtoSelecionadoId)
 
     if (!produto) {
       message.warning('Selecione um produto')
@@ -467,26 +368,41 @@ export default function Delivery() {
       return
     }
 
-    const novoItem = {
-      id: Date.now(),
-      produtoId: produto.id,
-      nome: produto.nome,
-      qtd: quantidadeProduto,
-      valor: produto.preco,
+    const indexExistente = itensNovoPedido.findIndex(
+      (item) => item.produtoId === produto.id
+    )
+
+    if (indexExistente >= 0) {
+      const atualizados = [...itensNovoPedido]
+      atualizados[indexExistente] = {
+        ...atualizados[indexExistente],
+        qtd: atualizados[indexExistente].qtd + Number(quantidadeProduto),
+      }
+      setItensNovoPedido(atualizados)
+    } else {
+      setItensNovoPedido((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          produtoId: produto.id,
+          nome: produto.nome,
+          qtd: Number(quantidadeProduto),
+          valor: Number(produto.preco || 0),
+        },
+      ])
     }
 
-    setItensNovoPedido((prev) => [...prev, novoItem])
     setProdutoSelecionadoId(null)
     setQuantidadeProduto(1)
     message.success('Item adicionado ao pedido')
   }
 
-  const removerItemPedido = (itemId) => {
+  function removerItemPedido(itemId) {
     setItensNovoPedido((prev) => prev.filter((item) => item.id !== itemId))
     message.success('Item removido')
   }
 
-  const salvarNovoPedido = async () => {
+  async function salvarNovoPedido() {
     try {
       const values = await formPedido.validateFields()
 
@@ -503,37 +419,28 @@ export default function Delivery() {
         return
       }
 
-      const novoId = Math.max(...pedidos.map((item) => item.id), 3000) + 1
-      const horario = gerarHorarioAtual()
+      setSaving(true)
 
-      const novoPedido = {
-        id: novoId,
-        clienteId: values.clienteId || null,
+      await http.post('/delivery/orders', {
+        customerId: values.clienteId || null,
         cliente: values.cliente,
         telefone: values.telefone,
         endereco:
-          values.origem === TIPO_ENTREGA.RETIRADA
-            ? 'Retirada no balcão'
-            : values.endereco,
+          values.origem === TIPO_ENTREGA.RETIRADA ? 'Retirada no balcão' : values.endereco,
         bairro: values.origem === TIPO_ENTREGA.RETIRADA ? '-' : values.bairro,
-        referencia:
-          values.origem === TIPO_ENTREGA.RETIRADA ? '' : values.referencia || '',
+        referencia: values.origem === TIPO_ENTREGA.RETIRADA ? '' : values.referencia,
         origem: values.origem,
-        status: STATUS_DELIVERY.RECEBIDO,
         prioridade: values.prioridade,
         pagamento: values.pagamento,
-        valorTotal: totalNovoPedido,
         trocoPara: values.pagamento === 'Dinheiro' ? Number(values.trocoPara || 0) : 0,
-        entregador: '',
         canal: values.canal,
-        horarioCriacao: horario,
-        previsaoEntrega: values.previsaoEntrega,
-        tempoMin: 0,
         observacao: values.observacao || '',
-        itens: itensNovoPedido,
-      }
-
-      setPedidos((prev) => [novoPedido, ...prev])
+        previsaoEntregaMinutos: Number(values.previsaoEntregaMinutos || 0),
+        itens: itensNovoPedido.map((item) => ({
+          produtoId: item.produtoId,
+          qtd: item.qtd,
+        })),
+      })
 
       formPedido.resetFields()
       formPedido.setFieldsValue({
@@ -542,53 +449,134 @@ export default function Delivery() {
         pagamento: 'PIX',
         canal: 'WhatsApp',
       })
-      setClienteSelecionadoId(null)
       setItensNovoPedido([])
       setProdutoSelecionadoId(null)
       setQuantidadeProduto(1)
       setTabAtiva('pedidos')
 
+      await carregarTudo()
       message.success('Pedido cadastrado com sucesso')
-    } catch (error) {}
+    } catch (error) {
+      if (error?.errorFields) return
+      console.error('Erro ao salvar pedido:', error)
+      message.error(error?.response?.data?.message || 'Erro ao salvar pedido')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const salvarNovoCliente = async () => {
+  async function salvarNovoCliente() {
     try {
       const values = await formCliente.validateFields()
+      setSaving(true)
 
-      const novoCliente = {
-        id: Math.max(...clientes.map((item) => item.id), 0) + 1,
-        nome: values.nome,
-        telefone: values.telefone,
-        endereco: values.endereco,
-        bairro: values.bairro,
-        referencia: values.referencia || '',
-      }
+      const response = await http.post('/customers', values)
+      const novoCliente = response.data
 
-      setClientes((prev) => [...prev, novoCliente])
       setModalClienteOpen(false)
       formCliente.resetFields()
-      selecionarCliente(novoCliente.id)
-      message.success('Cliente cadastrado com sucesso')
-    } catch (error) {}
-  }
+      await carregarTudo()
 
-  const salvarNovoEntregador = async () => {
-    try {
-      const values = await formEntregador.validateFields()
-
-      const novoEntregador = {
-        id: Math.max(...entregadores.map((item) => item.id), 0) + 1,
-        nome: values.nome,
-        telefone: values.telefone,
-        status: 'disponivel',
+      if (novoCliente?.id) {
+        selecionarCliente(novoCliente.id)
       }
 
-      setEntregadores((prev) => [...prev, novoEntregador])
+      message.success('Cliente cadastrado com sucesso')
+    } catch (error) {
+      if (error?.errorFields) return
+      message.error(error?.response?.data?.message || 'Erro ao salvar cliente')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function salvarNovoEntregador() {
+    try {
+      const values = await formEntregador.validateFields()
+      setSaving(true)
+
+      await http.post('/drivers', values)
+
       setModalEntregadorOpen(false)
       formEntregador.resetFields()
+      await carregarTudo()
       message.success('Entregador cadastrado com sucesso')
-    } catch (error) {}
+    } catch (error) {
+      if (error?.errorFields) return
+      message.error(error?.response?.data?.message || 'Erro ao salvar entregador')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function iniciarPreparo(pedidoId) {
+    try {
+      await http.patch(`/delivery/orders/${pedidoId}/status`, {
+        status: 'PREPARANDO',
+      })
+      await carregarTudo()
+      message.success('Pedido movido para preparando')
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao atualizar pedido')
+    }
+  }
+
+  async function despacharPedido(pedido) {
+    try {
+      const driverId =
+        pedido.origem === TIPO_ENTREGA.DELIVERY ? entregadoresDisponiveis[0]?.id : null
+
+      await http.patch(`/delivery/orders/${pedido.id}/dispatch`, {
+        driverId,
+      })
+
+      await carregarTudo()
+      message.success('Pedido despachado')
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao despachar pedido')
+    }
+  }
+
+  async function marcarEntregue(pedidoId) {
+    try {
+      await http.patch(`/delivery/orders/${pedidoId}/deliver`)
+      await carregarTudo()
+      message.success('Pedido marcado como entregue')
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao concluir pedido')
+    }
+  }
+
+  async function voltarEtapa(pedido) {
+    try {
+      if (pedido.status === STATUS_DELIVERY.ENTREGUE) {
+        await http.patch(`/delivery/orders/${pedido.id}/status`, { status: 'ROTA' })
+      } else if (pedido.status === STATUS_DELIVERY.ROTA) {
+        await http.patch(`/delivery/orders/${pedido.id}/status`, { status: 'PREPARANDO' })
+      } else if (pedido.status === STATUS_DELIVERY.PREPARANDO) {
+        await http.patch(`/delivery/orders/${pedido.id}/status`, { status: 'RECEBIDO' })
+      } else {
+        message.info('Esse pedido já está na primeira etapa')
+        return
+      }
+
+      await carregarTudo()
+      message.success('Etapa alterada com sucesso')
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'Erro ao voltar etapa')
+    }
+  }
+
+  function chamarEntregador(pedido) {
+    message.info(
+      pedido.origem === TIPO_ENTREGA.RETIRADA
+        ? `Aviso de retirada do pedido #${pedido.id}`
+        : `Entregador chamado para o pedido #${pedido.id}`
+    )
+  }
+
+  function tocarAlerta() {
+    message.info(somAtivo ? 'Alerta sonoro simulado' : 'O som está desativado')
   }
 
   const clientesColumns = [
@@ -626,13 +614,13 @@ export default function Delivery() {
     },
   ]
 
-  const renderPedidoCard = (pedido) => {
+  function renderPedidoCard(pedido) {
     const prioridade = getPriorityTag(pedido.prioridade)
-    const tempoCor = getTempoCor(pedido.tempoMin)
-    const atrasado = pedido.tempoMin >= 25
+    const tempoCor = getTempoCor(Number(pedido.tempoMin || 0))
+    const atrasado = Number(pedido.tempoMin || 0) >= 25
     const troco =
       pedido.pagamento === 'Dinheiro'
-        ? Math.max(pedido.trocoPara - pedido.valorTotal, 0)
+        ? Math.max(Number(pedido.trocoPara || 0) - Number(pedido.valorTotal || 0), 0)
         : 0
 
     return (
@@ -723,14 +711,10 @@ export default function Delivery() {
             <strong>Entregador:</strong> {pedido.entregador || '-'}
           </Text>
 
-          <Text style={{ color: '#d9d9d9' }}>
-            <strong>Previsão:</strong> {pedido.previsaoEntrega}
-          </Text>
-
           <Space size={6}>
             <ClockCircleOutlined style={{ color: tempoCor }} />
             <Text style={{ color: tempoCor, fontWeight: 700 }}>
-              {pedido.tempoMin} min
+              {Number(pedido.tempoMin || 0)} min
             </Text>
             {atrasado && <Tag color="error">Atrasado</Tag>}
           </Space>
@@ -748,7 +732,7 @@ export default function Delivery() {
         <Divider style={{ borderColor: '#262626', margin: '12px 0' }} />
 
         <Space direction="vertical" size={10} style={{ width: '100%' }}>
-          {pedido.itens.map((item) => (
+          {(pedido.itens || []).map((item) => (
             <div
               key={item.id}
               style={{
@@ -769,7 +753,7 @@ export default function Delivery() {
                   {item.qtd}x {item.nome}
                 </Text>
                 <Text style={{ color: '#fff' }}>
-                  {formatCurrency(item.qtd * item.valor)}
+                  {formatCurrency(Number(item.qtd || 0) * Number(item.valor || 0))}
                 </Text>
               </div>
             </div>
@@ -803,7 +787,7 @@ export default function Delivery() {
               type="primary"
               block
               icon={<CarOutlined />}
-              onClick={() => despacharPedido(pedido.id)}
+              onClick={() => despacharPedido(pedido)}
             >
               {pedido.origem === TIPO_ENTREGA.RETIRADA
                 ? 'Liberar retirada'
@@ -824,11 +808,7 @@ export default function Delivery() {
                   : 'Marcar entregue'}
               </Button>
 
-              <Button
-                block
-                icon={<UserOutlined />}
-                onClick={() => chamarEntregador(pedido)}
-              >
+              <Button block icon={<UserOutlined />} onClick={() => chamarEntregador(pedido)}>
                 {pedido.origem === TIPO_ENTREGA.RETIRADA
                   ? 'Chamar cliente'
                   : 'Chamar entregador'}
@@ -838,11 +818,7 @@ export default function Delivery() {
 
           {pedido.status !== STATUS_DELIVERY.ROTA &&
             pedido.status !== STATUS_DELIVERY.ENTREGUE && (
-              <Button
-                block
-                icon={<UserOutlined />}
-                onClick={() => chamarEntregador(pedido)}
-              >
+              <Button block icon={<UserOutlined />} onClick={() => chamarEntregador(pedido)}>
                 {pedido.origem === TIPO_ENTREGA.RETIRADA
                   ? 'Avisar retirada'
                   : 'Acionar entrega'}
@@ -859,7 +835,7 @@ export default function Delivery() {
     )
   }
 
-  const renderColuna = (titulo, pedidosColuna, corTopo) => {
+  function renderColuna(titulo, pedidosColuna, corTopo) {
     const tagColor =
       corTopo === '#1677ff'
         ? 'processing'
@@ -870,11 +846,7 @@ export default function Delivery() {
         : 'success'
 
     return (
-      <Card
-        bordered={false}
-        style={{ height: '100%' }}
-        styles={{ body: { padding: 14 } }}
-      >
+      <Card bordered={false} style={{ height: '100%' }} styles={{ body: { padding: 14 } }}>
         <div
           style={{
             display: 'flex',
@@ -919,8 +891,22 @@ export default function Delivery() {
           <CarOutlined /> Pedidos
         </span>
       ),
-      children: (
+      children: loading ? (
+        <Card bordered={false}>
+          <Spin />
+        </Card>
+      ) : (
         <>
+          {(erroPedidos || erroClientes || erroEntregadores || erroResumo || erroProdutos) && (
+            <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
+              {!!erroPedidos && <Alert type="warning" message={erroPedidos} showIcon />}
+              {!!erroClientes && <Alert type="warning" message={erroClientes} showIcon />}
+              {!!erroEntregadores && <Alert type="warning" message={erroEntregadores} showIcon />}
+              {!!erroResumo && <Alert type="warning" message={erroResumo} showIcon />}
+              {!!erroProdutos && <Alert type="warning" message={erroProdutos} showIcon />}
+            </Space>
+          )}
+
           <Row gutter={[16, 16]} style={{ marginBottom: 4 }}>
             <Col xs={24} sm={12} lg={6}>
               <Card bordered={false}>
@@ -1023,18 +1009,8 @@ export default function Delivery() {
             <Space wrap>
               <Segmented
                 options={[
-                  {
-                    label: (
-                      <span>
-                        <FilterOutlined /> Todos
-                      </span>
-                    ),
-                    value: 'todos',
-                  },
-                  {
-                    label: 'Atrasados',
-                    value: 'atrasados',
-                  },
+                  { label: 'Todos', value: 'todos' },
+                  { label: 'Atrasados', value: 'atrasados' },
                 ]}
                 value={mostrarApenasAtrasados ? 'atrasados' : 'todos'}
                 onChange={(value) => setMostrarApenasAtrasados(value === 'atrasados')}
@@ -1042,10 +1018,6 @@ export default function Delivery() {
 
               <Switch checked={mostrarEntregues} onChange={setMostrarEntregues} />
               <Text style={{ color: '#bfbfbf' }}>Mostrar entregues</Text>
-
-              <Tag color="red">25+ min = atrasado</Tag>
-              <Tag color="orange">15 a 24 min = atenção</Tag>
-              <Tag color="green">0 a 14 min = dentro do prazo</Tag>
 
               <Button
                 type="primary"
@@ -1088,6 +1060,15 @@ export default function Delivery() {
         <Row gutter={[16, 16]}>
           <Col xs={24} xl={15}>
             <Card bordered={false} title="Cadastro do pedido">
+              {!!erroProdutos && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message={erroProdutos}
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+
               <Form
                 form={formPedido}
                 layout="vertical"
@@ -1099,18 +1080,20 @@ export default function Delivery() {
                 }}
               >
                 <Row gutter={[12, 12]}>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="Cliente já cadastrado" name="clienteId">
+                  <Col xs={24} md={16}>
+                    <Form.Item label="Cliente cadastrado (opcional)" name="clienteId">
                       <Select
                         allowClear
-                        placeholder="Selecionar cliente"
+                        showSearch
+                        optionFilterProp="label"
+                        placeholder="Selecionar cliente ou preencher manualmente abaixo"
                         options={clientesMaisRecentes.map((item) => ({
                           label: `${item.nome} • ${item.telefone}`,
                           value: item.id,
                         }))}
                         onChange={(value) => {
                           if (!value) {
-                            setClienteSelecionadoId(null)
+                            limparClienteSelecionado()
                             return
                           }
                           selecionarCliente(value)
@@ -1119,12 +1102,19 @@ export default function Delivery() {
                     </Form.Item>
                   </Col>
 
-                  <Col xs={24} md={12}>
+                  <Col xs={24} md={8}>
                     <Space style={{ width: '100%', marginTop: 30 }}>
-                      <Button onClick={() => setModalClienteOpen(true)}>
-                        Novo cliente
-                      </Button>
+                      <Button onClick={() => setModalClienteOpen(true)}>Novo cliente</Button>
                     </Space>
+                  </Col>
+
+                  <Col xs={24}>
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="Pedido rápido"
+                      description="Você pode abrir o pedido sem cadastrar cliente. Basta preencher nome e telefone manualmente."
+                    />
                   </Col>
 
                   <Col xs={24} md={8}>
@@ -1181,7 +1171,13 @@ export default function Delivery() {
                       name="cliente"
                       rules={[{ required: true, message: 'Informe o cliente' }]}
                     >
-                      <Input placeholder="Nome do cliente" />
+                      <Input
+                        placeholder="Nome do cliente"
+                        onChange={() => {
+                          const clienteId = formPedido.getFieldValue('clienteId')
+                          if (clienteId) limparClienteSelecionado()
+                        }}
+                      />
                     </Form.Item>
                   </Col>
 
@@ -1191,7 +1187,13 @@ export default function Delivery() {
                       name="telefone"
                       rules={[{ required: true, message: 'Informe o telefone' }]}
                     >
-                      <Input placeholder="Telefone" />
+                      <Input
+                        placeholder="Telefone"
+                        onChange={() => {
+                          const clienteId = formPedido.getFieldValue('clienteId')
+                          if (clienteId) limparClienteSelecionado()
+                        }}
+                      />
                     </Form.Item>
                   </Col>
 
@@ -1244,11 +1246,11 @@ export default function Delivery() {
 
                   <Col xs={24} md={6}>
                     <Form.Item
-                      label="Previsão"
-                      name="previsaoEntrega"
-                      rules={[{ required: true, message: 'Informe a previsão' }]}
+                      label="Previsão (min)"
+                      name="previsaoEntregaMinutos"
+                      rules={[{ required: true, message: 'Informe a previsão em minutos' }]}
                     >
-                      <Input placeholder="Ex.: 20:10" />
+                      <InputNumber min={1} style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
 
@@ -1278,10 +1280,12 @@ export default function Delivery() {
             <Card bordered={false} title="Itens do pedido">
               <Space direction="vertical" style={{ width: '100%' }} size={12}>
                 <Select
+                  showSearch
+                  optionFilterProp="label"
                   placeholder="Selecionar produto"
                   value={produtoSelecionadoId}
                   onChange={setProdutoSelecionadoId}
-                  options={produtosMock.map((item) => ({
+                  options={produtosDelivery.map((item) => ({
                     label: `${item.nome} • ${formatCurrency(item.preco)}`,
                     value: item.id,
                   }))}
@@ -1330,7 +1334,7 @@ export default function Delivery() {
                             {item.qtd}x {item.nome}
                           </Text>
                           <Text style={{ color: '#fff', fontWeight: 700 }}>
-                            {formatCurrency(item.qtd * item.valor)}
+                            {formatCurrency(Number(item.qtd) * Number(item.valor))}
                           </Text>
                         </div>
 
@@ -1379,7 +1383,13 @@ export default function Delivery() {
                   </Space>
                 </Card>
 
-                <Button type="primary" size="large" block onClick={salvarNovoPedido}>
+                <Button
+                  type="primary"
+                  size="large"
+                  block
+                  loading={saving}
+                  onClick={salvarNovoPedido}
+                >
                   Salvar pedido
                 </Button>
               </Space>
@@ -1464,6 +1474,7 @@ export default function Delivery() {
         onOk={salvarNovoCliente}
         okText="Salvar cliente"
         cancelText="Cancelar"
+        confirmLoading={saving}
       >
         <Form form={formCliente} layout="vertical">
           <Form.Item
@@ -1511,6 +1522,7 @@ export default function Delivery() {
         onOk={salvarNovoEntregador}
         okText="Salvar entregador"
         cancelText="Cancelar"
+        confirmLoading={saving}
       >
         <Form form={formEntregador} layout="vertical">
           <Form.Item

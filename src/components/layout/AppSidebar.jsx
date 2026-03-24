@@ -6,6 +6,7 @@ import {
   CarOutlined,
   ShoppingOutlined,
   SettingOutlined,
+  AreaChartOutlined
 } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
 
@@ -18,7 +19,7 @@ export default function AppSidebar() {
   const items = [
     {
       key: '/dashboard',
-      icon: <DashboardOutlined />,
+      icon: <AreaChartOutlined />,
       label: 'Dashboard',
     },
     {

@@ -26,6 +26,7 @@ import {
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DeleteOutlined,
   DollarOutlined,
   ExclamationCircleOutlined,
   InboxOutlined,
@@ -33,8 +34,10 @@ import {
   PlusCircleOutlined,
   ReloadOutlined,
   SafetyOutlined,
+  SearchOutlined,
+  ShoppingCartOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import http from '@/api/http'
 
 const { Title, Text } = Typography
@@ -95,24 +98,45 @@ function getApiError(error, fallback) {
   return error?.response?.data?.message || fallback
 }
 
+function normalizeProduct(product) {
+  return {
+    id: product?.id,
+    nome: product?.nome || product?.name || 'Produto sem nome',
+    categoria:
+      product?.categoriaNome ||
+      product?.categoryName ||
+      product?.category?.name ||
+      'Sem categoria',
+    preco: Number(product?.preco || product?.price || 0),
+    ativo: Boolean(product?.ativo ?? product?.isActive ?? true),
+    disponivelBalcao: Boolean(product?.disponivelBalcao ?? true),
+  }
+}
+
 export default function CaixaPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [loadingProdutos, setLoadingProdutos] = useState(false)
 
   const [caixa, setCaixa] = useState(emptyCaixa)
   const [movimentacoes, setMovimentacoes] = useState([])
   const [historico, setHistorico] = useState([])
+  const [produtos, setProdutos] = useState([])
+  const [buscaProduto, setBuscaProduto] = useState('')
+  const [carrinhoVendaRapida, setCarrinhoVendaRapida] = useState([])
 
   const [openAbertura, setOpenAbertura] = useState(false)
   const [openFechamento, setOpenFechamento] = useState(false)
   const [openLancamento, setOpenLancamento] = useState(false)
+  const [openVendaRapida, setOpenVendaRapida] = useState(false)
 
   const [filtroHistorico, setFiltroHistorico] = useState(null)
 
   const [formAbertura] = Form.useForm()
   const [formFechamento] = Form.useForm()
   const [formLancamento] = Form.useForm()
+  const [formVendaRapida] = Form.useForm()
 
   useEffect(() => {
     loadCurrentCashRegister()
@@ -131,6 +155,36 @@ export default function CaixaPage() {
 
   const totalVendas = useMemo(() => Number(caixa?.totalVendas || 0), [caixa])
   const totalDespesasSaidas = useMemo(() => Number(caixa?.saidas || 0), [caixa])
+
+  const produtosFiltrados = useMemo(() => {
+  const termo = buscaProduto.trim().toLowerCase()
+
+  const base = produtos.filter(
+    (produto) => produto.ativo && produto.disponivelBalcao
+  )
+
+  if (!termo) return base
+
+  return base.filter((produto) => {
+    return (
+      produto.nome.toLowerCase().includes(termo) ||
+      produto.categoria.toLowerCase().includes(termo)
+    )
+  })
+}, [produtos, buscaProduto])
+
+  const totalItensCarrinho = useMemo(() => {
+    return carrinhoVendaRapida.reduce(
+      (acc, item) => acc + Number(item.quantidade || 0),
+      0
+    )
+  }, [carrinhoVendaRapida])
+
+  const totalVendaRapida = useMemo(() => {
+    return carrinhoVendaRapida.reduce((acc, item) => {
+      return acc + Number(item.quantidade || 0) * Number(item.preco || 0)
+    }, 0)
+  }, [carrinhoVendaRapida])
 
   async function loadCurrentCashRegister(showLoader = true) {
     try {
@@ -183,6 +237,219 @@ export default function CaixaPage() {
       setLoadingHistorico(false)
     }
   }
+
+  async function loadProdutos() {
+  try {
+    setLoadingProdutos(true)
+
+    const { data } = await http.get('/products')
+
+    const raw =
+      Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+        ? data.items
+        : Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data?.products)
+        ? data.products
+        : []
+
+    console.log('PRODUTOS API', raw)
+
+    setProdutos(raw.map(normalizeProduct).filter((p) => p.id))
+  } catch (error) {
+    message.error(getApiError(error, 'Erro ao carregar produtos da venda rápida.'))
+    setProdutos([])
+  } finally {
+    setLoadingProdutos(false)
+  }
+}
+
+  function abrirModalVendaRapida() {
+    setOpenVendaRapida(true)
+    setBuscaProduto('')
+    setCarrinhoVendaRapida([])
+    formVendaRapida.setFieldsValue({
+      customerName: '',
+      formaPagamento: 'DINHEIRO',
+      observacao: '',
+    })
+    loadProdutos()
+  }
+
+  function fecharModalVendaRapida() {
+    setOpenVendaRapida(false)
+    setBuscaProduto('')
+    setCarrinhoVendaRapida([])
+    formVendaRapida.resetFields()
+  }
+
+  function adicionarProdutoVendaRapida(produto) {
+  setCarrinhoVendaRapida((prev) => {
+    const existente = prev.find((item) => item.id === produto.id)
+
+    if (existente) {
+      return prev.map((item) =>
+        item.id === produto.id
+          ? {
+              ...item,
+              quantidade: Number(item.quantidade || 0) + 1,
+            }
+          : item
+      )
+    }
+
+    return [
+      ...prev,
+      {
+        id: produto.id,
+        nome: produto.nome,
+        categoria: produto.categoria,
+        preco: Number(produto.preco || 0),
+        quantidade: 1,
+      },
+    ]
+  })
+}
+
+  function alterarQuantidadeCarrinho(produtoId, quantidade) {
+    const qtd = Number(quantidade || 0)
+
+    if (qtd <= 0) {
+      setCarrinhoVendaRapida((prev) => prev.filter((item) => item.id !== produtoId))
+      return
+    }
+
+    setCarrinhoVendaRapida((prev) =>
+      prev.map((item) =>
+        item.id === produtoId ? { ...item, quantidade: qtd } : item
+      )
+    )
+  }
+
+  function removerItemCarrinho(produtoId) {
+    setCarrinhoVendaRapida((prev) => prev.filter((item) => item.id !== produtoId))
+  }
+
+  async function handleAbrirCaixa() {
+    try {
+      const values = await formAbertura.validateFields()
+      setSubmitting(true)
+
+      await http.post('/cash-register/open', {
+        fundoInicial: Number(values.fundoInicial || 0),
+        observacao: values.observacao || '',
+      })
+
+      setOpenAbertura(false)
+      formAbertura.resetFields()
+      await loadCurrentCashRegister(false)
+      await loadHistorico()
+      message.success('Caixa aberto com sucesso!')
+    } catch (error) {
+      if (error?.errorFields) return
+      message.error(getApiError(error, 'Não foi possível abrir o caixa.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleSalvarLancamento() {
+    try {
+      const values = await formLancamento.validateFields()
+      setSubmitting(true)
+
+      await http.post('/cash-register/movement', {
+        tipo: values.tipo,
+        formaPagamento: values.formaPagamento || null,
+        categoria: values.categoria,
+        descricao: values.descricao,
+        valor: Number(values.valor || 0),
+      })
+
+      setOpenLancamento(false)
+      formLancamento.resetFields()
+      await loadCurrentCashRegister(false)
+      await loadHistorico()
+      message.success('Lançamento registrado com sucesso!')
+    } catch (error) {
+      if (error?.errorFields) return
+      message.error(getApiError(error, 'Não foi possível registrar o lançamento.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleFecharCaixa() {
+    try {
+      const values = await formFechamento.validateFields()
+      setSubmitting(true)
+
+      await http.post('/cash-register/close', {
+        saldoInformado: Number(values.saldoInformado || 0),
+        observacao: values.observacao || '',
+      })
+
+      setOpenFechamento(false)
+      formFechamento.resetFields()
+      await loadCurrentCashRegister(false)
+      await loadHistorico()
+      message.success('Caixa fechado com sucesso!')
+    } catch (error) {
+      if (error?.errorFields) return
+      message.error(getApiError(error, 'Não foi possível fechar o caixa.'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleFinalizarVendaRapida() {
+  try {
+    const itensVenda = (carrinhoVendaRapida || []).filter(
+      (item) => Number(item.quantidade || 0) > 0
+    )
+
+    console.log('ITENS VENDA', itensVenda)
+
+    if (!itensVenda.length) {
+      message.warning('Adicione pelo menos um produto na venda rápida.')
+      return
+    }
+
+    const values = await formVendaRapida.validateFields()
+    setSubmitting(true)
+
+    const total = itensVenda.reduce((acc, item) => {
+      return acc + Number(item.quantidade || 0) * Number(item.preco || 0)
+    }, 0)
+
+    await http.post('/orders/quick-sale', {
+      customerName: values.customerName || null,
+      items: itensVenda.map((item) => ({
+        productId: item.id,
+        quantity: Number(item.quantidade || 0),
+        unitPrice: Number(item.preco || 0),
+      })),
+      payment: {
+        method: values.formaPagamento,
+        amount: Number(total),
+      },
+      notes: values.observacao || null,
+    })
+
+    message.success('Venda rápida registrada com sucesso!')
+    fecharModalVendaRapida()
+    await loadCurrentCashRegister(false)
+    await loadHistorico()
+  } catch (error) {
+    if (error?.errorFields) return
+    console.error(error)
+    message.error(getApiError(error, 'Não foi possível finalizar a venda rápida.'))
+  } finally {
+    setSubmitting(false)
+  }
+}
 
   const columns = [
     {
@@ -331,78 +598,6 @@ export default function CaixaPage() {
       ),
     },
   ]
-
-  async function handleAbrirCaixa() {
-    try {
-      const values = await formAbertura.validateFields()
-      setSubmitting(true)
-
-      await http.post('/cash-register/open', {
-        fundoInicial: Number(values.fundoInicial || 0),
-        observacao: values.observacao || '',
-      })
-
-      setOpenAbertura(false)
-      formAbertura.resetFields()
-      await loadCurrentCashRegister(false)
-      await loadHistorico()
-      message.success('Caixa aberto com sucesso!')
-    } catch (error) {
-      if (error?.errorFields) return
-      message.error(getApiError(error, 'Não foi possível abrir o caixa.'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function handleSalvarLancamento() {
-    try {
-      const values = await formLancamento.validateFields()
-      setSubmitting(true)
-
-      await http.post('/cash-register/movement', {
-        tipo: values.tipo,
-        formaPagamento: values.formaPagamento || null,
-        categoria: values.categoria,
-        descricao: values.descricao,
-        valor: Number(values.valor || 0),
-      })
-
-      setOpenLancamento(false)
-      formLancamento.resetFields()
-      await loadCurrentCashRegister(false)
-      await loadHistorico()
-      message.success('Lançamento registrado com sucesso!')
-    } catch (error) {
-      if (error?.errorFields) return
-      message.error(getApiError(error, 'Não foi possível registrar o lançamento.'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function handleFecharCaixa() {
-    try {
-      const values = await formFechamento.validateFields()
-      setSubmitting(true)
-
-      await http.post('/cash-register/close', {
-        saldoInformado: Number(values.saldoInformado || 0),
-        observacao: values.observacao || '',
-      })
-
-      setOpenFechamento(false)
-      formFechamento.resetFields()
-      await loadCurrentCashRegister(false)
-      await loadHistorico()
-      message.success('Caixa fechado com sucesso!')
-    } catch (error) {
-      if (error?.errorFields) return
-      message.error(getApiError(error, 'Não foi possível fechar o caixa.'))
-    } finally {
-      setSubmitting(false)
-    }
-  }
 
   const tabs = [
     {
@@ -705,7 +900,7 @@ export default function CaixaPage() {
                     Caixa
                   </Title>
                   <Text type="secondary">
-                    Controle de abertura, fechamento, despesas, sangrias e movimentações do dia.
+                    Controle de abertura, fechamento, despesas, sangrias, movimentações do dia e venda rápida no balcão.
                   </Text>
                 </Space>
               </Col>
@@ -731,6 +926,16 @@ export default function CaixaPage() {
                     disabled={caixa.status === 'ABERTO'}
                   >
                     Abrir caixa
+                  </Button>
+
+                  <Button
+                    icon={<ThunderboltOutlined />}
+                    type="primary"
+                    ghost
+                    onClick={abrirModalVendaRapida}
+                    disabled={caixa.status !== 'ABERTO'}
+                  >
+                    Venda rápida
                   </Button>
 
                   <Button
@@ -969,6 +1174,203 @@ export default function CaixaPage() {
             <TextArea rows={3} placeholder="Observações do fechamento" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Venda rápida"
+        open={openVendaRapida}
+        onCancel={fecharModalVendaRapida}
+        onOk={handleFinalizarVendaRapida}
+        okText="Finalizar venda"
+        cancelText="Cancelar"
+        confirmLoading={submitting}
+        width={1200}
+        destroyOnClose
+      >
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={14}>
+            <Card
+              title="Produtos"
+              style={{ borderRadius: 16 }}
+              bodyStyle={{ paddingBottom: 8 }}
+            >
+              <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                <Input
+                  allowClear
+                  placeholder="Buscar produto por nome ou categoria"
+                  prefix={<SearchOutlined />}
+                  value={buscaProduto}
+                  onChange={(e) => setBuscaProduto(e.target.value)}
+                />
+
+                {loadingProdutos ? (
+                  <div style={{ padding: 24, textAlign: 'center' }}>
+                    <Spin />
+                  </div>
+                ) : produtosFiltrados.length ? (
+                  <Row gutter={[12, 12]}>
+                    {produtosFiltrados.map((produto) => (
+                      <Col xs={24} sm={12} xl={8} key={produto.id}>
+                        <Card
+                          hoverable
+                          size="small"
+                          style={{ borderRadius: 12, height: '100%' }}
+                          onClick={() => adicionarProdutoVendaRapida(produto)}
+                        >
+                          <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                            <Text strong>{produto.nome}</Text>
+                            <Text type="secondary">{produto.categoria}</Text>
+                            <Text style={{ fontSize: 16, fontWeight: 700 }}>
+                              {moeda(produto.preco)}
+                            </Text>
+                            <Button type="primary" block icon={<PlusCircleOutlined />}>
+                              Adicionar
+                            </Button>
+                          </Space>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                ) : (
+                  <Empty description="Nenhum produto encontrado para venda rápida" />
+                )}
+              </Space>
+            </Card>
+          </Col>
+
+          <Col xs={24} lg={10}>
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              <Card
+                title="Carrinho"
+                style={{ borderRadius: 16 }}
+                extra={
+                  <Badge
+                    count={totalItensCarrinho}
+                    showZero
+                    overflowCount={999}
+                  >
+                    <ShoppingCartOutlined style={{ fontSize: 18 }} />
+                  </Badge>
+                }
+              >
+                {carrinhoVendaRapida.length ? (
+                  <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                    {carrinhoVendaRapida.map((item) => {
+                      const totalItem =
+                        Number(item.quantidade || 0) * Number(item.preco || 0)
+
+                      return (
+                        <Card
+                          key={item.id}
+                          size="small"
+                          style={{ borderRadius: 12 }}
+                        >
+                          <Row gutter={[8, 8]} align="middle">
+                            <Col xs={24} md={10}>
+                              <Space direction="vertical" size={0}>
+                                <Text strong>{item.nome}</Text>
+                                <Text type="secondary">{moeda(item.preco)} cada</Text>
+                              </Space>
+                            </Col>
+
+                            <Col xs={12} md={7}>
+                              <InputNumber
+                                min={1}
+                                precision={0}
+                                style={{ width: '100%' }}
+                                value={item.quantidade}
+                                onChange={(value) =>
+                                  alterarQuantidadeCarrinho(item.id, value)
+                                }
+                              />
+                            </Col>
+
+                            <Col xs={8} md={5}>
+                              <Text strong>{moeda(totalItem)}</Text>
+                            </Col>
+
+                            <Col xs={4} md={2}>
+                              <Button
+                                danger
+                                type="text"
+                                icon={<DeleteOutlined />}
+                                onClick={() => removerItemCarrinho(item.id)}
+                              />
+                            </Col>
+                          </Row>
+                        </Card>
+                      )
+                    })}
+
+                    <Divider style={{ margin: '4px 0' }} />
+
+                    <Row justify="space-between">
+                      <Col>
+                        <Text strong>Total</Text>
+                      </Col>
+                      <Col>
+                        <Title level={4} style={{ margin: 0 }}>
+                          {moeda(totalVendaRapida)}
+                        </Title>
+                      </Col>
+                    </Row>
+                  </Space>
+                ) : (
+                  <Empty description="Adicione produtos para montar a venda" />
+                )}
+              </Card>
+
+              <Card title="Pagamento" style={{ borderRadius: 16 }}>
+                <Form
+                  form={formVendaRapida}
+                  layout="vertical"
+                  initialValues={{
+                    customerName: '',
+                    formaPagamento: 'DINHEIRO',
+                    observacao: '',
+                  }}
+                >
+                  <Form.Item
+                    name="customerName"
+                    label="Cliente (opcional)"
+                  >
+                    <Input placeholder="Ex.: Consumidor balcão" />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="formaPagamento"
+                    label="Forma de pagamento"
+                    rules={[{ required: true, message: 'Selecione a forma de pagamento' }]}
+                  >
+                    <Select
+                      options={[
+                        { value: 'DINHEIRO', label: 'Dinheiro' },
+                        { value: 'PIX', label: 'PIX' },
+                        { value: 'DEBITO', label: 'Débito' },
+                        { value: 'CREDITO', label: 'Crédito' },
+                        { value: 'OUTRO', label: 'Outro' },
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item name="observacao" label="Observação">
+                    <TextArea
+                      rows={3}
+                      placeholder="Ex.: venda de balcão, produto já pronto..."
+                    />
+                  </Form.Item>
+
+                  <Alert
+                    type="info"
+                    showIcon
+                    message={`Total da venda: ${moeda(totalVendaRapida)}`}
+                    description="Essa venda não abre comanda de mesa. Ela é registrada como venda rápida de balcão."
+                  />
+                </Form>
+              </Card>
+            </Space>
+          </Col>
+        </Row>
       </Modal>
     </>
   )
