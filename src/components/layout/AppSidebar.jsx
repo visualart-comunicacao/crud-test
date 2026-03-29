@@ -67,7 +67,7 @@ export default function AppSidebar() {
           fontWeight: 700,
         }}
       >
-        S&B
+        <img src="/logo.jpeg" alt="" style={{ maxWidth: '80px' }} />
       </div>
 
       <Menu
