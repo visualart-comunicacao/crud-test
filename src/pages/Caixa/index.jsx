@@ -1102,6 +1102,7 @@ export default function CaixaPage() {
                 />
               </Form.Item>
             </Col>
+            
           </Row>
 
           <Form.Item

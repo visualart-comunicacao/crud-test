@@ -11,6 +11,7 @@ import Cozinha from '../pages/Cozinha'
 import Delivery from '../pages/Delivery'
 import Produtos from '../pages/Produtos'
 import Configuracoes from '../pages/Configuracoes'
+import CardapioDigital from '../pages/public/CardapioDigital'
 import PrivateRoute from './PrivateRoute'
 
 function ComandasRedirect() {
@@ -28,7 +29,8 @@ export default function RoutesApp() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-
+     <Route path="/cardapio" element={<CardapioDigital />} />
+      
       <Route element={<PrivateRoute />}>
         <Route path="/comandas" element={<ComandasRedirect />} />
         <Route path="/comandas-mobile" element={<ComandasMobile />} />
