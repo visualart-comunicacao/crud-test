@@ -109,7 +109,12 @@ function normalizeProduct(product) {
       'Sem categoria',
     preco: Number(product?.preco || product?.price || 0),
     ativo: Boolean(product?.ativo ?? product?.isActive ?? true),
-    disponivelBalcao: Boolean(product?.disponivelBalcao ?? true),
+    disponivelBalcao: Boolean(
+      product?.disponivelBalcao ??
+        product?.availableCounter ??
+        product?.availableInStore ??
+        true
+    ),
   }
 }
 
@@ -157,21 +162,21 @@ export default function CaixaPage() {
   const totalDespesasSaidas = useMemo(() => Number(caixa?.saidas || 0), [caixa])
 
   const produtosFiltrados = useMemo(() => {
-  const termo = buscaProduto.trim().toLowerCase()
+    const termo = buscaProduto.trim().toLowerCase()
 
-  const base = produtos.filter(
-    (produto) => produto.ativo && produto.disponivelBalcao
-  )
-
-  if (!termo) return base
-
-  return base.filter((produto) => {
-    return (
-      produto.nome.toLowerCase().includes(termo) ||
-      produto.categoria.toLowerCase().includes(termo)
+    const base = produtos.filter(
+      (produto) => produto.ativo && produto.disponivelBalcao
     )
-  })
-}, [produtos, buscaProduto])
+
+    if (!termo) return base
+
+    return base.filter((produto) => {
+      return (
+        produto.nome.toLowerCase().includes(termo) ||
+        produto.categoria.toLowerCase().includes(termo)
+      )
+    })
+  }, [produtos, buscaProduto])
 
   const totalItensCarrinho = useMemo(() => {
     return carrinhoVendaRapida.reduce(
@@ -185,6 +190,36 @@ export default function CaixaPage() {
       return acc + Number(item.quantidade || 0) * Number(item.preco || 0)
     }, 0)
   }, [carrinhoVendaRapida])
+
+  const formaPagamentoVendaRapida = Form.useWatch(
+    'formaPagamento',
+    formVendaRapida
+  )
+  const valorRecebidoVendaRapida = Form.useWatch(
+    'valorRecebido',
+    formVendaRapida
+  )
+
+  const trocoVendaRapida = useMemo(() => {
+    const recebido = Number(valorRecebidoVendaRapida || 0)
+    const total = Number(totalVendaRapida || 0)
+
+    if (String(formaPagamentoVendaRapida || '') !== 'DINHEIRO') return 0
+    if (recebido <= 0) return 0
+    if (recebido < total) return 0
+
+    return recebido - total
+  }, [formaPagamentoVendaRapida, valorRecebidoVendaRapida, totalVendaRapida])
+
+  const faltaReceberVendaRapida = useMemo(() => {
+    const recebido = Number(valorRecebidoVendaRapida || 0)
+    const total = Number(totalVendaRapida || 0)
+
+    if (String(formaPagamentoVendaRapida || '') !== 'DINHEIRO') return 0
+    if (recebido >= total) return 0
+
+    return total - recebido
+  }, [formaPagamentoVendaRapida, valorRecebidoVendaRapida, totalVendaRapida])
 
   async function loadCurrentCashRegister(showLoader = true) {
     try {
@@ -239,42 +274,43 @@ export default function CaixaPage() {
   }
 
   async function loadProdutos() {
-  try {
-    setLoadingProdutos(true)
+    try {
+      setLoadingProdutos(true)
 
-    const { data } = await http.get('/products')
+      const { data } = await http.get('/products')
 
-    const raw =
-      Array.isArray(data)
+      const raw = Array.isArray(data)
         ? data
         : Array.isArray(data?.items)
-        ? data.items
-        : Array.isArray(data?.data)
-        ? data.data
-        : Array.isArray(data?.products)
-        ? data.products
-        : []
+          ? data.items
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data?.products)
+              ? data.products
+              : []
 
-    console.log('PRODUTOS API', raw)
-
-    setProdutos(raw.map(normalizeProduct).filter((p) => p.id))
-  } catch (error) {
-    message.error(getApiError(error, 'Erro ao carregar produtos da venda rápida.'))
-    setProdutos([])
-  } finally {
-    setLoadingProdutos(false)
+      setProdutos(raw.map(normalizeProduct).filter((p) => p.id))
+    } catch (error) {
+      message.error(getApiError(error, 'Erro ao carregar produtos da venda rápida.'))
+      setProdutos([])
+    } finally {
+      setLoadingProdutos(false)
+    }
   }
-}
 
   function abrirModalVendaRapida() {
     setOpenVendaRapida(true)
     setBuscaProduto('')
     setCarrinhoVendaRapida([])
+
+    formVendaRapida.resetFields()
     formVendaRapida.setFieldsValue({
       customerName: '',
       formaPagamento: 'DINHEIRO',
+      valorRecebido: null,
       observacao: '',
     })
+
     loadProdutos()
   }
 
@@ -286,32 +322,32 @@ export default function CaixaPage() {
   }
 
   function adicionarProdutoVendaRapida(produto) {
-  setCarrinhoVendaRapida((prev) => {
-    const existente = prev.find((item) => item.id === produto.id)
+    setCarrinhoVendaRapida((prev) => {
+      const existente = prev.find((item) => item.id === produto.id)
 
-    if (existente) {
-      return prev.map((item) =>
-        item.id === produto.id
-          ? {
-              ...item,
-              quantidade: Number(item.quantidade || 0) + 1,
-            }
-          : item
-      )
-    }
+      if (existente) {
+        return prev.map((item) =>
+          item.id === produto.id
+            ? {
+                ...item,
+                quantidade: Number(item.quantidade || 0) + 1,
+              }
+            : item
+        )
+      }
 
-    return [
-      ...prev,
-      {
-        id: produto.id,
-        nome: produto.nome,
-        categoria: produto.categoria,
-        preco: Number(produto.preco || 0),
-        quantidade: 1,
-      },
-    ]
-  })
-}
+      return [
+        ...prev,
+        {
+          id: produto.id,
+          nome: produto.nome,
+          categoria: produto.categoria,
+          preco: Number(produto.preco || 0),
+          quantidade: 1,
+        },
+      ]
+    })
+  }
 
   function alterarQuantidadeCarrinho(produtoId, quantidade) {
     const qtd = Number(quantidade || 0)
@@ -405,51 +441,58 @@ export default function CaixaPage() {
   }
 
   async function handleFinalizarVendaRapida() {
-  try {
-    const itensVenda = (carrinhoVendaRapida || []).filter(
-      (item) => Number(item.quantidade || 0) > 0
-    )
+    try {
+      const itensVenda = (carrinhoVendaRapida || []).filter(
+        (item) => Number(item.quantidade || 0) > 0
+      )
 
-    console.log('ITENS VENDA', itensVenda)
+      if (!itensVenda.length) {
+        message.warning('Adicione pelo menos um produto na venda rápida.')
+        return
+      }
 
-    if (!itensVenda.length) {
-      message.warning('Adicione pelo menos um produto na venda rápida.')
-      return
+      const values = await formVendaRapida.validateFields()
+
+      const total = itensVenda.reduce((acc, item) => {
+        return acc + Number(item.quantidade || 0) * Number(item.preco || 0)
+      }, 0)
+
+      if (
+        values.formaPagamento === 'DINHEIRO' &&
+        Number(values.valorRecebido || 0) < Number(total)
+      ) {
+        message.warning('O valor recebido não pode ser menor que o total da venda.')
+        return
+      }
+
+      setSubmitting(true)
+
+      await http.post('/orders/quick-sale', {
+        customerName: values.customerName || null,
+        items: itensVenda.map((item) => ({
+          productId: item.id,
+          quantity: Number(item.quantidade || 0),
+          unitPrice: Number(item.preco || 0),
+        })),
+        payment: {
+          method: values.formaPagamento,
+          amount: Number(total),
+        },
+        notes: values.observacao || null,
+      })
+
+      message.success('Venda rápida registrada com sucesso!')
+      fecharModalVendaRapida()
+      await loadCurrentCashRegister(false)
+      await loadHistorico()
+    } catch (error) {
+      if (error?.errorFields) return
+      console.error(error)
+      message.error(getApiError(error, 'Não foi possível finalizar a venda rápida.'))
+    } finally {
+      setSubmitting(false)
     }
-
-    const values = await formVendaRapida.validateFields()
-    setSubmitting(true)
-
-    const total = itensVenda.reduce((acc, item) => {
-      return acc + Number(item.quantidade || 0) * Number(item.preco || 0)
-    }, 0)
-
-    await http.post('/orders/quick-sale', {
-      customerName: values.customerName || null,
-      items: itensVenda.map((item) => ({
-        productId: item.id,
-        quantity: Number(item.quantidade || 0),
-        unitPrice: Number(item.preco || 0),
-      })),
-      payment: {
-        method: values.formaPagamento,
-        amount: Number(total),
-      },
-      notes: values.observacao || null,
-    })
-
-    message.success('Venda rápida registrada com sucesso!')
-    fecharModalVendaRapida()
-    await loadCurrentCashRegister(false)
-    await loadHistorico()
-  } catch (error) {
-    if (error?.errorFields) return
-    console.error(error)
-    message.error(getApiError(error, 'Não foi possível finalizar a venda rápida.'))
-  } finally {
-    setSubmitting(false)
   }
-}
 
   const columns = [
     {
@@ -589,8 +632,8 @@ export default function CaixaPage() {
               Number(value || 0) === 0
                 ? undefined
                 : Number(value || 0) > 0
-                ? '#1677ff'
-                : '#cf1322',
+                  ? '#1677ff'
+                  : '#cf1322',
           }}
         >
           {moeda(value)}
@@ -801,8 +844,8 @@ export default function CaixaPage() {
                       Number(caixa.diferenca || 0) === 0
                         ? undefined
                         : Number(caixa.diferenca || 0) > 0
-                        ? '#1677ff'
-                        : '#cf1322',
+                          ? '#1677ff'
+                          : '#cf1322',
                   }}
                 />
               </Col>
@@ -1102,7 +1145,6 @@ export default function CaixaPage() {
                 />
               </Form.Item>
             </Col>
-            
           </Row>
 
           <Form.Item
@@ -1187,191 +1229,270 @@ export default function CaixaPage() {
         confirmLoading={submitting}
         width={1200}
         destroyOnClose
+        styles={{ body: { paddingTop: 12 } }}
       >
-        <Row gutter={[16, 16]}>
-          <Col xs={24} lg={14}>
-            <Card
-              title="Produtos"
-              style={{ borderRadius: 16 }}
-              bodyStyle={{ paddingBottom: 8 }}
-            >
-              <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                <Input
-                  allowClear
-                  placeholder="Buscar produto por nome ou categoria"
-                  prefix={<SearchOutlined />}
-                  value={buscaProduto}
-                  onChange={(e) => setBuscaProduto(e.target.value)}
-                />
-
-                {loadingProdutos ? (
-                  <div style={{ padding: 24, textAlign: 'center' }}>
-                    <Spin />
-                  </div>
-                ) : produtosFiltrados.length ? (
-                  <Row gutter={[12, 12]}>
-                    {produtosFiltrados.map((produto) => (
-                      <Col xs={24} sm={12} xl={8} key={produto.id}>
-                        <Card
-                          hoverable
-                          size="small"
-                          style={{ borderRadius: 12, height: '100%' }}
-                          onClick={() => adicionarProdutoVendaRapida(produto)}
-                        >
-                          <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                            <Text strong>{produto.nome}</Text>
-                            <Text type="secondary">{produto.categoria}</Text>
-                            <Text style={{ fontSize: 16, fontWeight: 700 }}>
-                              {moeda(produto.preco)}
-                            </Text>
-                            <Button type="primary" block icon={<PlusCircleOutlined />}>
-                              Adicionar
-                            </Button>
-                          </Space>
-                        </Card>
-                      </Col>
-                    ))}
-                  </Row>
-                ) : (
-                  <Empty description="Nenhum produto encontrado para venda rápida" />
-                )}
-              </Space>
-            </Card>
-          </Col>
-
-          <Col xs={24} lg={10}>
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <div style={{ height: '72vh' }}>
+          <Row gutter={[16, 16]} style={{ height: '100%' }}>
+            <Col xs={24} lg={14} style={{ height: '100%' }}>
               <Card
-                title="Carrinho"
-                style={{ borderRadius: 16 }}
-                extra={
-                  <Badge
-                    count={totalItensCarrinho}
-                    showZero
-                    overflowCount={999}
-                  >
-                    <ShoppingCartOutlined style={{ fontSize: 18 }} />
-                  </Badge>
-                }
+                title="Produtos"
+                style={{ borderRadius: 16, height: '100%' }}
+                styles={{
+                  body: {
+                    paddingBottom: 8,
+                    height: 'calc(72vh - 57px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  },
+                }}
               >
-                {carrinhoVendaRapida.length ? (
-                  <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                    {carrinhoVendaRapida.map((item) => {
-                      const totalItem =
-                        Number(item.quantidade || 0) * Number(item.preco || 0)
+                <Space
+                  direction="vertical"
+                  size={16}
+                  style={{ width: '100%', flex: 1, minHeight: 0 }}
+                >
+                  <Input
+                    allowClear
+                    placeholder="Buscar produto por nome ou categoria"
+                    prefix={<SearchOutlined />}
+                    value={buscaProduto}
+                    onChange={(e) => setBuscaProduto(e.target.value)}
+                  />
 
-                      return (
-                        <Card
-                          key={item.id}
-                          size="small"
-                          style={{ borderRadius: 12 }}
-                        >
-                          <Row gutter={[8, 8]} align="middle">
-                            <Col xs={24} md={10}>
-                              <Space direction="vertical" size={0}>
-                                <Text strong>{item.nome}</Text>
-                                <Text type="secondary">{moeda(item.preco)} cada</Text>
+                  <div
+                    style={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      paddingRight: 4,
+                    }}
+                  >
+                    {loadingProdutos ? (
+                      <div style={{ padding: 24, textAlign: 'center' }}>
+                        <Spin />
+                      </div>
+                    ) : produtosFiltrados.length ? (
+                      <Row gutter={[12, 12]}>
+                        {produtosFiltrados.map((produto) => (
+                          <Col xs={24} sm={12} xl={8} key={produto.id}>
+                            <Card
+                              hoverable
+                              size="small"
+                              style={{ borderRadius: 12, height: '100%' }}
+                              onClick={() => adicionarProdutoVendaRapida(produto)}
+                            >
+                              <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                                <Text strong>{produto.nome}</Text>
+                                <Text type="secondary">{produto.categoria}</Text>
+                                <Text style={{ fontSize: 16, fontWeight: 700 }}>
+                                  {moeda(produto.preco)}
+                                </Text>
+                                <Button type="primary" block icon={<PlusCircleOutlined />}>
+                                  Adicionar
+                                </Button>
                               </Space>
-                            </Col>
-
-                            <Col xs={12} md={7}>
-                              <InputNumber
-                                min={1}
-                                precision={0}
-                                style={{ width: '100%' }}
-                                value={item.quantidade}
-                                onChange={(value) =>
-                                  alterarQuantidadeCarrinho(item.id, value)
-                                }
-                              />
-                            </Col>
-
-                            <Col xs={8} md={5}>
-                              <Text strong>{moeda(totalItem)}</Text>
-                            </Col>
-
-                            <Col xs={4} md={2}>
-                              <Button
-                                danger
-                                type="text"
-                                icon={<DeleteOutlined />}
-                                onClick={() => removerItemCarrinho(item.id)}
-                              />
-                            </Col>
-                          </Row>
-                        </Card>
-                      )
-                    })}
-
-                    <Divider style={{ margin: '4px 0' }} />
-
-                    <Row justify="space-between">
-                      <Col>
-                        <Text strong>Total</Text>
-                      </Col>
-                      <Col>
-                        <Title level={4} style={{ margin: 0 }}>
-                          {moeda(totalVendaRapida)}
-                        </Title>
-                      </Col>
-                    </Row>
-                  </Space>
-                ) : (
-                  <Empty description="Adicione produtos para montar a venda" />
-                )}
+                            </Card>
+                          </Col>
+                        ))}
+                      </Row>
+                    ) : (
+                      <Empty description="Nenhum produto encontrado para venda rápida" />
+                    )}
+                  </div>
+                </Space>
               </Card>
+            </Col>
 
-              <Card title="Pagamento" style={{ borderRadius: 16 }}>
-                <Form
-                  form={formVendaRapida}
-                  layout="vertical"
-                  initialValues={{
-                    customerName: '',
-                    formaPagamento: 'DINHEIRO',
-                    observacao: '',
+            <Col xs={24} lg={10} style={{ height: '100%' }}>
+              <div
+                style={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                }}
+              >
+                <Card
+                  title="Carrinho"
+                  style={{ borderRadius: 16 }}
+                  styles={{
+                    body: {
+                      maxHeight: '30vh',
+                      overflowY: 'auto',
+                    },
+                  }}
+                  extra={
+                    <Badge
+                      count={totalItensCarrinho}
+                      showZero
+                      overflowCount={999}
+                    >
+                      <ShoppingCartOutlined style={{ fontSize: 18 }} />
+                    </Badge>
+                  }
+                >
+                  {carrinhoVendaRapida.length ? (
+                    <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                      {carrinhoVendaRapida.map((item) => {
+                        const totalItem =
+                          Number(item.quantidade || 0) * Number(item.preco || 0)
+
+                        return (
+                          <Card
+                            key={item.id}
+                            size="small"
+                            style={{ borderRadius: 12 }}
+                          >
+                            <Row gutter={[8, 8]} align="middle">
+                              <Col xs={24} md={10}>
+                                <Space direction="vertical" size={0}>
+                                  <Text strong>{item.nome}</Text>
+                                  <Text type="secondary">{moeda(item.preco)} cada</Text>
+                                </Space>
+                              </Col>
+
+                              <Col xs={12} md={7}>
+                                <InputNumber
+                                  min={1}
+                                  precision={0}
+                                  style={{ width: '100%' }}
+                                  value={item.quantidade}
+                                  onChange={(value) =>
+                                    alterarQuantidadeCarrinho(item.id, value)
+                                  }
+                                />
+                              </Col>
+
+                              <Col xs={8} md={5}>
+                                <Text strong>{moeda(totalItem)}</Text>
+                              </Col>
+
+                              <Col xs={4} md={2}>
+                                <Button
+                                  danger
+                                  type="text"
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => removerItemCarrinho(item.id)}
+                                />
+                              </Col>
+                            </Row>
+                          </Card>
+                        )
+                      })}
+
+                      <Divider style={{ margin: '4px 0' }} />
+
+                      <Row justify="space-between">
+                        <Col>
+                          <Text strong>Total</Text>
+                        </Col>
+                        <Col>
+                          <Title level={4} style={{ margin: 0 }}>
+                            {moeda(totalVendaRapida)}
+                          </Title>
+                        </Col>
+                      </Row>
+                    </Space>
+                  ) : (
+                    <Empty description="Adicione produtos para montar a venda" />
+                  )}
+                </Card>
+
+                <Card
+                  title="Pagamento"
+                  style={{ borderRadius: 16, flex: 1 }}
+                  styles={{
+                    body: {
+                      overflowY: 'auto',
+                      maxHeight: 'calc(72vh - 30vh - 90px)',
+                    },
                   }}
                 >
-                  <Form.Item
-                    name="customerName"
-                    label="Cliente (opcional)"
+                  <Form
+                    form={formVendaRapida}
+                    layout="vertical"
+                    initialValues={{
+                      customerName: '',
+                      formaPagamento: 'DINHEIRO',
+                      valorRecebido: null,
+                      observacao: '',
+                    }}
                   >
-                    <Input placeholder="Ex.: Consumidor balcão" />
-                  </Form.Item>
+                    <Form.Item
+                      name="customerName"
+                      label="Cliente (opcional)"
+                    >
+                      <Input placeholder="Ex.: Consumidor balcão" />
+                    </Form.Item>
 
-                  <Form.Item
-                    name="formaPagamento"
-                    label="Forma de pagamento"
-                    rules={[{ required: true, message: 'Selecione a forma de pagamento' }]}
-                  >
-                    <Select
-                      options={[
-                        { value: 'DINHEIRO', label: 'Dinheiro' },
-                        { value: 'PIX', label: 'PIX' },
-                        { value: 'DEBITO', label: 'Débito' },
-                        { value: 'CREDITO', label: 'Crédito' },
-                        { value: 'OUTRO', label: 'Outro' },
-                      ]}
+                    <Form.Item
+                      name="formaPagamento"
+                      label="Forma de pagamento"
+                      rules={[{ required: true, message: 'Selecione a forma de pagamento' }]}
+                    >
+                      <Select
+                        options={[
+                          { value: 'DINHEIRO', label: 'Dinheiro' },
+                          { value: 'PIX', label: 'PIX' },
+                          { value: 'DEBITO', label: 'Débito' },
+                          { value: 'CREDITO', label: 'Crédito' },
+                          { value: 'OUTRO', label: 'Outro' },
+                        ]}
+                      />
+                    </Form.Item>
+
+                    {String(formaPagamentoVendaRapida || '') === 'DINHEIRO' && (
+                      <>
+                        <Form.Item
+                          name="valorRecebido"
+                          label="Valor recebido"
+                          rules={[
+                            { required: true, message: 'Informe o valor recebido' },
+                          ]}
+                        >
+                          <InputNumber
+                            min={0}
+                            precision={2}
+                            style={{ width: '100%' }}
+                            placeholder="0,00"
+                          />
+                        </Form.Item>
+
+                        <Alert
+                          type={faltaReceberVendaRapida > 0 ? 'warning' : 'success'}
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                          message={
+                            Number(valorRecebidoVendaRapida || 0) <= 0
+                              ? `Troco: ${moeda(0)}`
+                              : faltaReceberVendaRapida > 0
+                                ? `Falta receber: ${moeda(faltaReceberVendaRapida)}`
+                                : `Troco: ${moeda(trocoVendaRapida)}`
+                          }
+                        />
+                      </>
+                    )}
+
+                    <Form.Item name="observacao" label="Observação">
+                      <TextArea
+                        rows={3}
+                        placeholder="Ex.: venda de balcão, produto já pronto..."
+                      />
+                    </Form.Item>
+
+                    <Alert
+                      type="info"
+                      showIcon
+                      message={`Total da venda: ${moeda(totalVendaRapida)}`}
+                      description="Essa venda não abre comanda de mesa. Ela é registrada como venda rápida de balcão."
                     />
-                  </Form.Item>
-
-                  <Form.Item name="observacao" label="Observação">
-                    <TextArea
-                      rows={3}
-                      placeholder="Ex.: venda de balcão, produto já pronto..."
-                    />
-                  </Form.Item>
-
-                  <Alert
-                    type="info"
-                    showIcon
-                    message={`Total da venda: ${moeda(totalVendaRapida)}`}
-                    description="Essa venda não abre comanda de mesa. Ela é registrada como venda rápida de balcão."
-                  />
-                </Form>
-              </Card>
-            </Space>
-          </Col>
-        </Row>
+                  </Form>
+                </Card>
+              </div>
+            </Col>
+          </Row>
+        </div>
       </Modal>
     </>
   )
